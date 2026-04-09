@@ -1315,24 +1315,38 @@ function openReport(mode) {
 
     const sizeInfo = isDealer ? `<div class="win-size">${w.width}" W × ${w.height}" H${w.leg?' · Leg: '+w.leg+'"':''}</div>` : '';
 
-    return `<tr>
+    const customerRow = `<tr>
       <td class="win-num">${w.idx}</td>
       <td class="win-svg">${svg}</td>
       <td class="win-info">
         <div style="font-size:0.78rem;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:3px">Qty: ${w.qty}</div>
         <div class="win-type">${typeLabels[w.type]||w.type}${w.config?' — '+w.config:''}</div>
         <div class="win-desc">${desc}</div>
-        ${sizeInfo}
         <div class="win-meta">${w.room||''}${glassInfo?' · '+glassInfo:''}</div>
         ${w.notes?`<div class="win-notes">Notes: ${w.notes}</div>`:''}
         ${w.miscdesc&&w.type==='MISC'?`<div class="win-notes">${w.miscdesc}</div>`:''}
-        ${w.adderdesc&&w.lineAdder&&!isDealer?`<div class="win-notes">+ ${w.adderdesc}</div>`:''}
+        ${w.adderdesc&&w.lineAdder?`<div class="win-notes">+ ${w.adderdesc}</div>`:''}
       </td>
-      ${isDealer ? dealerCols : customerCols}
+      ${customerCols}
     </tr>`;
+
+    const dealerRow = `<tr>
+      <td class="win-num">${w.idx}</td>
+      <td class="win-info" colspan="2">
+        <div class="win-type">${typeLabels[w.type]||w.type}${w.config?' — '+w.config:''}</div>
+        <div class="win-size">${w.width}" W × ${w.height}"H${w.leg?' · Leg: '+w.leg+'"':''} · Qty: ${w.qty}</div>
+        <div class="win-meta">${w.room||''}${glassInfo?' · '+glassInfo:''}</div>
+        ${w.notes?`<div class="win-notes">${w.notes}</div>`:''}
+        ${w.miscdesc&&w.type==='MISC'?`<div class="win-notes">${w.miscdesc}</div>`:''}
+        ${w.adderdesc&&w.lineAdder?`<div class="win-notes">+ ${w.adderdesc}: ${fmt(w.lineAdder)}</div>`:''}
+      </td>
+      ${dealerCols}
+    </tr>`;
+
+    return isDealer ? dealerRow : customerRow;
   }).join('');
 
-  const dealerHeader = isDealer ? `<th>PGT Cost</th><th>After Markup</th><th>Tax</th><th>Labor</th><th>Screen</th><th>Add-on</th><th>Line Total</th>` : `<th class="line-price-header">Price</th>`;
+  const dealerHeader = isDealer ? `<th colspan="2">Window / Size</th><th>PGT Cost</th><th>w/ Markup</th><th>Tax</th><th>Labor</th><th>Screen</th><th>Add-on</th><th>Total</th>` : `<th class="line-price-header">Price</th>`;
 
   const totalsHTML = `
     <div class="totals-section">
@@ -1508,7 +1522,7 @@ function openReport(mode) {
     ${data.jobNotes?('<div class="job-field job-notes"><label>Scope of Work</label><span>'+data.jobNotes+'</span></div>'):''}
   </div>
   <table class="win-table">
-    <thead><tr><th>#</th><th>Window</th><th>Description</th>${dealerHeader}</tr></thead>
+    <thead><tr><th>#</th>${isDealer ? dealerHeader : '<th>Window</th><th>Description</th><th class="line-price-header">Price</th>'}</tr></thead>
     <tbody>${winRows}</tbody>
   </table>
   ${totalsHTML}
