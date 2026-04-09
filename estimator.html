@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Window Estimator</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --blue: #1a6fc4; --blue-light: #e8f0fb;
+    --green: #1a8a4a; --green-light: #e8f5ed;
+    --red: #c0392b; --red-light: #fdecea;
+    --orange: #b85c00; --orange-light: #fff3e8;
+    --border: #d0d0d0; --text: #1a1a1a; --muted: #666;
+    --radius: 12px; --tap: 54px;
+  }
+  html { font-size: 17px; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #efefef; color: var(--text); padding-bottom: 4rem; }
+  header { background: var(--blue); color: #fff; padding: 1.1rem 1rem 1rem; }
+  header h1 { font-size: 1.2rem; font-weight: 600; }
+  header p { font-size: 0.8rem; opacity: 0.8; margin-top: 2px; }
+  .section { background: #fff; border-radius: var(--radius); margin: 1rem; padding: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.07); }
+  .section-title { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 0.9rem; }
+  .field { margin-bottom: 0.9rem; }
+  .field:last-child { margin-bottom: 0; }
+  label { display: block; font-size: 0.82rem; color: var(--muted); margin-bottom: 5px; font-weight: 500; }
+  input, select { width: 100%; min-height: var(--tap); font-size: 1rem; padding: 0 14px; border: 1.5px solid var(--border); border-radius: 10px; background: #fff; color: var(--text); appearance: none; -webkit-appearance: none; }
+  select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23666' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; }
+  input:focus, select:focus { outline: none; border-color: var(--blue); }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  .divider { height: 1px; background: var(--border); margin: 0.9rem 0; }
+  .win-card { background: #fff; border-radius: var(--radius); margin: 0 1rem 0.75rem; padding: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.07); border-left: 4px solid var(--blue); }
+  .win-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+  .win-label { font-size: 1rem; font-weight: 600; color: var(--blue); }
+  .del-btn { min-height: 44px; padding: 0 16px; border: 1.5px solid var(--red); background: var(--red-light); color: var(--red); border-radius: 10px; font-size: 0.85rem; font-weight: 600; cursor: pointer; }
+  .price-box { background: var(--green-light); border: 1.5px solid var(--green); border-radius: 10px; padding: 10px 14px; margin-top: 10px; display: none; }
+  .price-box.show { display: block; }
+  .price-row { display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 4px; color: var(--muted); }
+  .price-row.total { font-size: 1rem; font-weight: 700; color: var(--green); border-top: 1px solid var(--green); padding-top: 6px; margin-top: 6px; margin-bottom: 0; }
+  .price-nomatch { color: var(--red); font-size: 0.85rem; }
+  .match-note { font-size: 0.75rem; color: var(--muted); margin-top: 4px; font-style: italic; }
+  .config-field { display: none; }
+  .config-field.show { display: block; }
+  .totals-card { background: #fff; border-radius: var(--radius); margin: 0 1rem 1rem; padding: 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.07); border-left: 4px solid var(--green); }
+  .total-row { display: flex; justify-content: space-between; font-size: 0.9rem; margin-bottom: 8px; color: var(--muted); }
+  .total-row.grand { font-size: 1.2rem; font-weight: 700; color: var(--green); border-top: 1.5px solid var(--border); padding-top: 10px; margin-top: 4px; }
+  .add-btn { display: block; width: calc(100% - 2rem); margin: 0 1rem 0.75rem; min-height: 58px; background: var(--blue-light); color: var(--blue); border: 2px dashed var(--blue); border-radius: var(--radius); font-size: 1.05rem; font-weight: 600; cursor: pointer; }
+  .action-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 0.5rem 1rem 0; }
+  .save-btn { min-height: 56px; background: var(--green-light); color: var(--green); border: 1.5px solid var(--green); border-radius: var(--radius); font-size: 1rem; font-weight: 700; cursor: pointer; }
+  .load-btn { min-height: 56px; background: var(--orange-light); color: var(--orange); border: 1.5px solid var(--orange); border-radius: var(--radius); font-size: 1rem; font-weight: 700; cursor: pointer; }
+  .copy-btn { display: block; width: calc(100% - 2rem); margin: 0.75rem 1rem 0; min-height: 60px; background: var(--blue); color: #fff; border: none; border-radius: var(--radius); font-size: 1.1rem; font-weight: 700; cursor: pointer; }
+  .email-btn { display: block; width: calc(100% - 2rem); margin: 0.75rem 1rem 0; min-height: 56px; background: #fff8e8; color: #8a5a00; border: 1.5px solid #b87c00; border-radius: var(--radius); font-size: 1rem; font-weight: 700; cursor: pointer; }
+  .clear-btn { display: block; width: calc(100% - 2rem); margin: 0.75rem 1rem 0; min-height: 56px; background: var(--red-light); color: var(--red); border: 1.5px solid var(--red); border-radius: var(--radius); font-size: 1rem; font-weight: 700; cursor: pointer; }
+  .copy-btn:active,.save-btn:active,.load-btn:active,.clear-btn:active,.email-btn:active { opacity:0.8; transform:scale(0.98); }
+  .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; }
+  .overlay.show { display: flex; align-items: flex-end; }
+  .panel { background: #fff; border-radius: var(--radius) var(--radius) 0 0; width: 100%; max-height: 75vh; overflow-y: auto; padding: 1.25rem 1rem; }
+  .panel-title { font-size: 1rem; font-weight: 700; margin-bottom: 1rem; }
+  .saved-job { display: flex; justify-content: space-between; align-items: center; padding: 0.9rem 0; border-bottom: 1px solid var(--border); }
+  .saved-job:last-child { border-bottom: none; }
+  .saved-job-info { flex: 1; }
+  .saved-job-name { font-size: 0.95rem; font-weight: 600; }
+  .saved-job-meta { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
+  .saved-job-btns { display: flex; gap: 8px; margin-left: 10px; }
+  .load-job-btn { min-height: 44px; padding: 0 14px; background: var(--blue-light); color: var(--blue); border: 1.5px solid var(--blue); border-radius: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer; }
+  .del-job-btn { min-height: 44px; padding: 0 14px; background: var(--red-light); color: var(--red); border: 1.5px solid var(--red); border-radius: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer; }
+  .close-panel-btn { display: block; width: 100%; min-height: 52px; margin-top: 1rem; background: #efefef; color: var(--text); border: none; border-radius: var(--radius); font-size: 1rem; font-weight: 600; cursor: pointer; }
+  .no-jobs { text-align: center; color: var(--muted); padding: 2rem 0; font-size: 0.9rem; }
+  .toast { position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%); background: #1a1a1a; color: #fff; padding: 12px 24px; border-radius: 999px; font-size: 0.9rem; font-weight: 600; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 999; white-space: nowrap; }
+  .toast.show { opacity: 1; }
+  .settings-note { font-size: 0.78rem; color: var(--muted); margin-top: 4px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Window Estimator</h1>
+  <p>PGT pricing · 35.77% markup · 7% tax · $487 window / $771.77 SGD panel / $1,200 FD</p>
+</header>
+
+<div class="section">
+  <div class="section-title">Job Info</div>
+  <div class="row2">
+    <div class="field"><label>Job #</label><input type="text" id="jobNum" placeholder="8787788" inputmode="numeric"></div>
+    <div class="field"><label>Date</label><input type="date" id="jobDate"></div>
+  </div>
+  <div class="field"><label>Customer Name</label><input type="text" id="custName" placeholder="Last, First" autocomplete="off"></div>
+  <div class="field"><label>Phone</label><input type="tel" id="custPhone" placeholder="(941) 555-0000"></div>
+  <div class="field"><label>Address</label><input type="text" id="custAddr" placeholder="123 Main St, Parrish FL" autocomplete="off"></div>
+</div>
+
+<div class="section">
+  <div class="section-title">Pricing Settings</div>
+  <div class="row2">
+    <div class="field"><label>Markup %</label><input type="number" id="markup" value="35.77" inputmode="decimal" step="0.01"></div>
+    <div class="field"><label>Tax %</label><input type="number" id="taxRate" value="7" inputmode="decimal" step="0.1"></div>
+  </div>
+  <div class="row2">
+    <div class="field">
+      <label>Window Labor $</label>
+      <input type="number" id="labor" value="487" inputmode="numeric">
+      <div class="settings-note">Per window</div>
+    </div>
+    <div class="field">
+      <label>SGD Labor $</label>
+      <input type="number" id="sgdLabor" value="771.77" inputmode="decimal" step="0.01">
+      <div class="settings-note">Per panel</div>
+    </div>
+    <div class="field">
+      <label>French Door Labor $</label>
+      <input type="number" id="fdLabor" value="1200" inputmode="numeric">
+      <div class="settings-note">Per door</div>
+    </div>
+  </div>
+  <div class="field">
+    <label>Size match tolerance (inches)</label>
+    <input type="number" id="tolerance" value="2" inputmode="decimal" step="0.5">
+  </div>
+  <div class="divider"></div>
+  <div class="row2">
+    <div class="field">
+      <label>Permit $</label>
+      <input type="number" id="permitCost" value="350" inputmode="numeric">
+      <div class="settings-note">Added to job total</div>
+    </div>
+    <div class="field">
+      <label>Misc Add-on $</label>
+      <input type="number" id="miscCost" value="0" inputmode="numeric">
+      <div class="settings-note">Extra costs</div>
+    </div>
+  </div>
+</div>
+
+<div id="windowList"></div>
+<button class="add-btn" onclick="addWindow()">+ Add Window</button>
+
+<div class="totals-card" id="totalsCard">
+  <div class="section-title">Estimate Total</div>
+  <div class="total-row"><span>Windows subtotal</span><span id="totWindows">$0.00</span></div>
+  <div class="total-row"><span>Tax</span><span id="totTax">$0.00</span></div>
+  <div class="total-row"><span>Labor</span><span id="totLabor">$0.00</span></div>
+  <div class="total-row"><span>Permit</span><span id="totPermit">$0.00</span></div>
+  <div class="total-row"><span>Misc</span><span id="totMisc">$0.00</span></div>
+  <div class="total-row grand"><span>Total</span><span id="totGrand">$0.00</span></div>
+</div>
+
+<div class="action-row">
+  <button class="save-btn" onclick="saveJob()">Save Job</button>
+  <button class="load-btn" onclick="openPanel()">Load Job</button>
+</div>
+<button class="copy-btn" onclick="generateOutput()">Copy Estimate Summary</button>
+<button class="email-btn" onclick="emailJob()">Email Estimate</button>
+<button class="clear-btn" onclick="clearAll()">Clear / New Job</button>
+
+<div class="overlay" id="overlay" onclick="closePanelClick(event)">
+  <div class="panel">
+    <div class="panel-title">Saved Estimates</div>
+    <div id="savedList"></div>
+    <button class="close-panel-btn" onclick="closeOverlay()">Close</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let winCount = 0;
+
+// SGD panel counts per config
+const SGD_PANELS = { 'XX': 2, 'XXX': 3, 'OXXO': 4 };
+
+// Configs available per type
+const TYPE_CONFIGS = {
+  'FD5555': ['X','XX'],
+  'SGD770NS': ['XX','XXX','OXXO'],
+  'SGD5570NS': ['XX','XXX','OXXO'],
+  'SGD5570': ['XX','XXX','OXXO']
+};
+
+// Is this an SGD type?
+const SGD_TYPES = ['SGD770NS','SGD5570NS','SGD5570'];
+// Is this a French Door?
+const FD_TYPES = ['FD5555'];
+// Is this a combo unit?
+const COMBO_TYPES = ['COMBO_SH5500'];
+// Is this a mull bar?
+const MULL_TYPES = ['MULLBAR'];
+// Is this an AR5520?
+const AR_TYPES = ['AR5520_HC','AR5520_EB'];
+
+// Price list — SGDs include config field
+const priceList = {
+  'SH5500': [
+    {w:18.125,h:25,cost:268.34},{w:18.125,h:37.375,cost:318.64},{w:18.125,h:49.625,cost:367.37},
+    {w:18.125,h:62,cost:416.50},{w:18.125,h:75,cost:469.95},{w:18.125,h:84,cost:507.29},
+    {w:25.5,h:25,cost:314.71},{w:25.5,h:37.375,cost:381.52},{w:25.5,h:49.625,cost:449.52},
+    {w:25.5,h:62,cost:519.86},{w:25.5,h:75,cost:600.43},{w:25.5,h:84,cost:655.85},
+    {w:36,h:25,cost:375.23},{w:36,h:37.375,cost:472.31},{w:36,h:49.625,cost:574.10},
+    {w:36,h:62,cost:672.74},{w:36,h:75,cost:774.53},{w:36,h:84,cost:851.95},
+    {w:52.125,h:25,cost:474.67},{w:52.125,h:37.375,cost:617.72},{w:52.125,h:49.625,cost:756.45},
+    {w:52.125,h:62,cost:895.96},{w:52.125,h:75,cost:1118.01},{w:52.125,h:84,cost:1362.06}
+  ],
+  'DH5560': [
+    {w:36,h:61.75,cost:812.31}
+  ],
+  'HR5510': [
+    // XO config
+    {w:25.5,h:25,cost:309.97},{w:25.5,h:37.375,cost:387.79},{w:25.5,h:49.625,cost:464.80},{w:25.5,h:62,cost:541.82},
+    {w:36,h:25,cost:370.32},{w:36,h:37.375,cost:474.33},{w:36,h:49.625,cost:577.95},{w:36,h:62,cost:682.75},
+    {w:52.125,h:25,cost:459.24},{w:52.125,h:37.375,cost:606.93},{w:52.125,h:49.625,cost:753.03},{w:52.125,h:62,cost:899.92},
+    {w:73,h:25,cost:575.56},{w:73,h:37,cost:777.25},{w:73,h:49,cost:977.34},{w:73,h:62,cost:1330.66},{w:73,h:75,cost:2517.31},
+    // XOX config
+    {w:109,h:49,cost:1474.69},{w:109,h:62,cost:1747.82},
+    {w:120,h:49,cost:1692.64},{w:120,h:62,cost:1845.48}
+  ],
+  'PW5520': [
+    {w:52,h:25,cost:661.42},{w:52,h:63,cost:1351.11}
+  ],
+  'AR5520': [
+    {w:36,h:18,cost:485.02}
+  ],
+  'FD5555': [
+    {w:36,h:79,cfg:'X',cost:2008.27},{w:36,h:96,cfg:'X',cost:2262.85},
+    {w:72,h:79,cfg:'XX',cost:3731.45},{w:72,h:96,cfg:'XX',cost:4197.48}
+  ],
+  // SGD770NS — config-based pricing
+  'SGD770NS': [
+    // XX (2-panel)
+    {w:60,h:79,cfg:'XX',cost:2079.14},{w:72,h:79,cfg:'XX',cost:2297.26},{w:96,h:79,cfg:'XX',cost:2731.31},
+    {w:109,h:79,cfg:'XX',cost:4101.23},{w:120,h:79,cfg:'XX',cost:4101.23},
+    {w:60,h:96,cfg:'XX',cost:2429.59},{w:72,h:96,cfg:'XX',cost:2683.77},{w:96,h:96,cfg:'XX',cost:3192.79},
+    {w:109,h:96,cfg:'XX',cost:4730.14},{w:120,h:96,cfg:'XX',cost:4730.14},
+    // XXX (3-panel)
+    {w:109,h:96,cfg:'XXX',cost:4306.65},{w:120,h:96,cfg:'XXX',cost:5105.64},
+    {w:144,h:79,cfg:'XXX',cost:4329.71},{w:144,h:96,cfg:'XXX',cost:5105.64},
+    // OXXO (4-panel)
+    {w:120,h:79,cfg:'OXXO',cost:4423.34},{w:120,h:96,cfg:'OXXO',cost:5165.96},
+    {w:144,h:79,cfg:'OXXO',cost:4875.92},{w:144,h:96,cfg:'OXXO',cost:5676.46}
+  ],
+  'SGD5570NS': [
+    {w:72,h:79,cfg:'XX',cost:3106.03}
+  ],
+  'SGD5570': [
+    {w:71,h:79,cfg:'XX',cost:2860.06}
+  ],
+  'MULL': [
+    {w:0,h:36,cost:53.01},{w:0,h:49,cost:72.16},{w:0,h:62,cost:154.28},
+    {w:0,h:73,cost:181.66},{w:0,h:75,cost:186.63}
+  ],
+  'AR5520_HC': [
+    {w:36,h:18,cost:485.02},{w:49,h:24.5,cost:691.10},
+    {w:52,h:26,cost:691.10},{w:73,h:36.5,cost:1352.76}
+  ],
+  'AR5520_EB': [
+    {w:26,h:12,leg:6,cost:524.76},{w:36,h:12,leg:6,cost:524.76},
+    {w:52,h:12,leg:6,cost:747.77},{w:62,h:22,leg:6,cost:903.81},
+    {w:73,h:22,leg:6,cost:1091.48}
+  ]
+};
+
+const typeLabels = {
+  'SH5500':'Single Hung 5500','DH5560':'Double Hung 5560',
+  'HR5510':'Horizontal Roller 5510','PW5520':'Picture Window 5520',
+  'AR5520':'Architectural 5520','FD5555':'French Door 5555',
+  'SGD770NS':'Sliding Glass Door 770NS','SGD5570NS':'Sliding Glass Door 5570NS','SGD5570':'Sliding Glass Door 5570',
+  'COMBO_SH5500':'Combo — Single Hung 5500 (2-3 unit)',
+  'MULLBAR':'Mull Bar (standalone)',
+  'AR5520_HC':'AR5520 Half Circle',
+  'AR5520_EB':'AR5520 Eyebrow'
+};
+
+function isSGD(type) { return SGD_TYPES.includes(type); }
+
+function findPrice(type, width, height, cfg) {
+  const list = priceList[type];
+  if (!list) return null;
+  const tol = parseFloat(g('tolerance')) || 2;
+  let best = null, bestDist = Infinity;
+  for (const item of list) {
+    const dw = Math.abs(item.w - width);
+    const dh = Math.abs(item.h - height);
+    if (dw > tol || dh > tol) continue;
+    // For SGD types, must match config if provided
+    if (item.cfg && cfg && item.cfg !== cfg) continue;
+    const dist = dw + dh;
+    if (dist < bestDist) { bestDist = dist; best = item; }
+  }
+  return best ? { cost: best.cost, matchW: best.w, matchH: best.h, cfg: best.cfg, exact: best.w===width && best.h===height } : null;
+}
+
+function getLaborCost(type, cfg, qty) {
+  qty = qty || 1;
+  if (isSGD(type)) {
+    const panels = SGD_PANELS[cfg] || 2;
+    const perPanel = parseFloat(g('sgdLabor')) || 771.77;
+    return panels * perPanel * qty;
+  }
+  if (FD_TYPES.includes(type)) {
+    return (parseFloat(g('fdLabor')) || 1200) * qty;
+  }
+  return (parseFloat(g('labor')) || 487) * qty;
+}
+
+function calcWindowPrice(cost) {
+  const markup = parseFloat(g('markup')) / 100 || 0.3577;
+  const tax = parseFloat(g('taxRate')) / 100 || 0.07;
+  const withMarkup = cost * (1 + markup);
+  const withTax = withMarkup * (1 + tax);
+  return { cost, withMarkup, withTax, tax: withMarkup * tax };
+}
+
+function fmt(n) { return '$' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,','); }
+
+function findARPrice(type, width, height, leg) {
+  const list = priceList[type];
+  if (!list) return null;
+  const tol = parseFloat(g('tolerance')) || 3;
+  let best = null, bestDist = Infinity;
+  for (const item of list) {
+    const dw = Math.abs(item.w - width);
+    const dh = Math.abs(item.h - height);
+    const dl = leg && item.leg ? Math.abs(item.leg - leg) : 0;
+    if (dw > tol || dh > tol) continue;
+    const dist = dw + dh + dl;
+    if (dist < bestDist) { bestDist = dist; best = item; }
+  }
+  return best || null;
+}
+
+function updatePrice(id) {
+  const type = g('w'+id+'-type');
+  const width = parseFloat(g('w'+id+'-width')) || 0;
+  const height = parseFloat(g('w'+id+'-height')) || 0;
+  const qty = parseInt(g('w'+id+'-qty')) || 1;
+  const cfg = g('w'+id+'-config');
+  const box = document.getElementById('w'+id+'-pricebox');
+
+  // Show/hide config dropdown
+  const cfgField = document.getElementById('w'+id+'-configfield');
+  if (cfgField) {
+    const comboField = document.getElementById('w'+id+'-combofield');
+    if (isSGD(type) || FD_TYPES.includes(type)) {
+      cfgField.classList.add('show');
+      if (comboField) comboField.classList.remove('show');
+      const cfgSel = document.getElementById('w'+id+'-config');
+      const configs = TYPE_CONFIGS[type] || ['XX'];
+      const curVal = cfgSel.value;
+      cfgSel.innerHTML = '<option value="">-- config --</option>' + configs.map(c=>`<option value="${c}"${c===curVal?' selected':''}>${c}</option>`).join('');
+    } else if (type === 'AR5520_HC') {
+      cfgField.classList.remove('show');
+      if (comboField) comboField.classList.remove('show');
+      const legField = document.getElementById('w'+id+'-legfield');
+      if (legField) legField.classList.remove('show');
+      // Auto-fill height as width/2 for true semicircle
+      const wVal = parseFloat(g('w'+id+'-width'));
+      const hField = document.getElementById('w'+id+'-height');
+      if (wVal && hField && !hField.value) { hField.value = (wVal/2).toFixed(1); }
+    } else if (type === 'AR5520_EB') {
+      cfgField.classList.remove('show');
+      if (comboField) comboField.classList.remove('show');
+      // Show leg field
+      const legField = document.getElementById('w'+id+'-legfield');
+      if (legField) legField.classList.add('show');
+    } else if (COMBO_TYPES.includes(type)) {
+      cfgField.classList.remove('show');
+      if (comboField) comboField.classList.add('show');
+    } else {
+      cfgField.classList.remove('show');
+      if (comboField) comboField.classList.remove('show');
+      const legFieldElse = document.getElementById('w'+id+'-legfield');
+      if (legFieldElse) legFieldElse.classList.remove('show');
+    }
+  }
+
+  if (!type || !width || !height) { box.classList.remove('show'); updateTotals(); return; }
+  if ((isSGD(type) || FD_TYPES.includes(type)) && !cfg) { box.innerHTML='<div class="price-nomatch">Select a configuration</div>'; box.classList.add('show'); updateTotals(); return; }
+
+  // COMBO UNIT LOGIC
+  if (COMBO_TYPES.includes(type)) {
+    const baseType = type.replace('COMBO_','');
+    const units = parseInt(g('w'+id+'-combounits')) || 2;
+    const unitWidth = width / units;
+    const markup = parseFloat(g('markup'))/100||0.3577;
+    const tax = parseFloat(g('taxRate'))/100||0.07;
+    const laborPer = parseFloat(g('labor'))||487;
+
+    // Find each unit price
+    const unitMatch = findPrice(baseType, unitWidth, height, null);
+    // Find mull price by height
+    const mullMatch = findPrice('MULL', 0, height, null);
+
+    if (!unitMatch) {
+      box.innerHTML='<div class="price-nomatch">No match for individual unit size — try adjusting tolerance</div>';
+      box.classList.add('show'); updateTotals(); return;
+    }
+
+    const mullCost = mullMatch ? mullMatch.cost : 91.30;
+    const mullCount = units - 1;
+    const unitCostTotal = unitMatch.cost * units;
+    const mullCostTotal = mullCost * mullCount;
+    const totalPGT = unitCostTotal + mullCostTotal;
+    const withMarkup = totalPGT * (1+markup);
+    const withTax = withMarkup * (1+tax);
+    const taxAmt = withMarkup * tax;
+    const labor = laborPer * units * qty;
+    const lineTotal = (withMarkup * qty) + (taxAmt * qty) + labor;
+
+    box.innerHTML = `
+      <div class="price-row"><span>${units} units @ ${fmt(unitMatch.cost)} each</span><span>${fmt(unitCostTotal)}</span></div>
+      <div class="price-row"><span>${mullCount} mull bar${mullCount>1?'s':''} @ ${fmt(mullCost)} each</span><span>${fmt(mullCostTotal)}</span></div>
+      <div class="price-row"><span>PGT total cost</span><span>${fmt(totalPGT)}</span></div>
+      <div class="price-row"><span>After markup (${g('markup')||35.77}%)</span><span>${fmt(withMarkup)}</span></div>
+      <div class="price-row"><span>Tax (${g('taxRate')||7}%)</span><span>${fmt(taxAmt)}</span></div>
+      <div class="price-row"><span>Labor (${units} units × ${fmt(laborPer)})</span><span>${fmt(labor)}</span></div>
+      ${qty>1?`<div class="price-row"><span>× ${qty} combos</span><span></span></div>`:''}
+      <div class="price-row total"><span>Line Total</span><span>${fmt(lineTotal)}</span></div>
+      <div class="match-note">Each unit matched to ${unitMatch.matchW}" × ${unitMatch.matchH}" · ${mullCount} mull bar${mullCount>1?'s':''}</div>
+    `;
+    box.classList.add('show'); updateTotals(); return;
+  }
+
+  // AR5520 HALF CIRCLE / EYEBROW
+  if (AR_TYPES.includes(type)) {
+    const markup = parseFloat(g('markup'))/100||0.3577;
+    const tax = parseFloat(g('taxRate'))/100||0.07;
+    const labor = parseFloat(g('labor'))||487;
+    const leg = parseFloat(g('w'+id+'-leg'))||0;
+    const arMatch = findARPrice(type, width, height, leg);
+    if (!arMatch) {
+      box.innerHTML='<div class="price-nomatch">No match found — try adjusting size or tolerance</div>';
+      box.classList.add('show'); updateTotals(); return;
+    }
+    const p = calcWindowPrice(arMatch.cost);
+    const lineLabor = labor * qty;
+    const lineTotal = (p.withMarkup*qty) + (p.tax*qty) + lineLabor;
+    const isHC = type==='AR5520_HC';
+    box.innerHTML = `
+      <div class="price-row"><span>PGT cost</span><span>${fmt(arMatch.cost)}</span></div>
+      <div class="price-row"><span>After markup</span><span>${fmt(p.withMarkup)}</span></div>
+      <div class="price-row"><span>Tax</span><span>${fmt(p.tax)}</span></div>
+      <div class="price-row"><span>Labor (${qty} × ${fmt(labor)})</span><span>${fmt(lineLabor)}</span></div>
+      ${qty>1?`<div class="price-row"><span>× ${qty}</span><span></span></div>`:''}
+      <div class="price-row total"><span>Line Total</span><span>${fmt(lineTotal)}</span></div>
+      <div class="match-note">Matched to ${arMatch.w}" × ${arMatch.h}"${arMatch.leg?' leg: '+arMatch.leg+'"':''}</div>
+    `;
+    box.classList.add('show'); updateTotals(); return;
+  }
+
+  // MULL BAR STANDALONE
+  if (MULL_TYPES.includes(type)) {
+    const markup = parseFloat(g('markup'))/100||0.3577;
+    const tax = parseFloat(g('taxRate'))/100||0.07;
+    const mullMatch = findPrice('MULL', 0, height, null);
+    if (!mullMatch) { box.innerHTML='<div class="price-nomatch">No mull price for this length — enter height as the mull length</div>'; box.classList.add('show'); updateTotals(); return; }
+    const p = calcWindowPrice(mullMatch.cost);
+    const lineTotal = (p.withMarkup * qty) + (p.tax * qty);
+    box.innerHTML = `
+      <div class="price-row"><span>PGT cost</span><span>${fmt(mullMatch.cost)}</span></div>
+      <div class="price-row"><span>After markup</span><span>${fmt(p.withMarkup)}</span></div>
+      <div class="price-row"><span>Tax</span><span>${fmt(p.tax)}</span></div>
+      <div class="price-row"><span>No labor on mull bars</span><span>—</span></div>
+      ${qty>1?`<div class="price-row"><span>× ${qty}</span><span></span></div>`:''}
+      <div class="price-row total"><span>Line Total</span><span>${fmt(lineTotal)}</span></div>
+      <div class="match-note">Matched to ${mullMatch.matchH}" mull bar</div>
+    `;
+    box.classList.add('show'); updateTotals(); return;
+  }
+
+  const match = findPrice(type, width, height, cfg);
+  if (!match) { box.innerHTML='<div class="price-nomatch">No match found — try adjusting size or tolerance</div>'; box.classList.add('show'); updateTotals(); return; }
+
+  const p = calcWindowPrice(match.cost);
+  const labor = getLaborCost(type, cfg, qty);
+  const lineWindows = p.withMarkup * qty;
+  const lineTax = p.tax * qty;
+  const lineTotal = lineWindows + lineTax + labor;
+
+  let laborNote;
+  if (isSGD(type)) { laborNote = `${SGD_PANELS[cfg]||2} panels × ${fmt(parseFloat(g('sgdLabor'))||771.77)}`; }
+  else if (FD_TYPES.includes(type)) { laborNote = `${qty} door${qty>1?'s':''} × ${fmt(parseFloat(g('fdLabor'))||1200)}`; }
+  else { laborNote = `${qty} window${qty>1?'s':''} × ${fmt(parseFloat(g('labor'))||487)}`; }
+
+  box.innerHTML = `
+    <div class="price-row"><span>PGT cost</span><span>${fmt(p.cost)}</span></div>
+    <div class="price-row"><span>After markup (${g('markup')||35.77}%)</span><span>${fmt(p.withMarkup)}</span></div>
+    <div class="price-row"><span>Tax (${g('taxRate')||7}%)</span><span>${fmt(p.tax)}</span></div>
+    <div class="price-row"><span>Labor (${laborNote})</span><span>${fmt(labor)}</span></div>
+    ${qty>1?`<div class="price-row"><span>× ${qty} windows</span><span></span></div>`:''}
+    <div class="price-row total"><span>Line Total</span><span>${fmt(lineTotal)}</span></div>
+    <div class="match-note">${match.exact?'Exact match':`Matched to ${match.matchW}" × ${match.matchH}"`}${match.cfg?' · Config: '+match.cfg:''}</div>
+  `;
+  box.classList.add('show');
+  updateTotals();
+}
+
+function updateTotals() {
+  let windowsTotal=0, taxTotal=0, laborTotal=0;
+  const markup = parseFloat(g('markup'))/100||0.3577;
+  const tax = parseFloat(g('taxRate'))/100||0.07;
+
+  for (let i=1; i<=winCount; i++) {
+    if (!document.getElementById('win-'+i)) continue;
+    const type=g('w'+i+'-type'), width=parseFloat(g('w'+i+'-width'))||0, height=parseFloat(g('w'+i+'-height'))||0;
+    const qty=parseInt(g('w'+i+'-qty'))||1, cfg=g('w'+i+'-config');
+    if (!type||!width||!height) continue;
+    if ((isSGD(type)||FD_TYPES.includes(type))&&!cfg) continue;
+    if (AR_TYPES.includes(type)) {
+      const leg = parseFloat(g('w'+i+'-leg'))||0;
+      const arMatch = findARPrice(type,width,height,leg);
+      if (!arMatch) continue;
+      const wm = arMatch.cost*(1+markup);
+      windowsTotal += wm*qty;
+      taxTotal += wm*tax*qty;
+      laborTotal += (parseFloat(g('labor'))||487)*qty;
+      continue;
+    }
+    if (MULL_TYPES.includes(type)) {
+      const mullMatch = findPrice('MULL',0,height,null);
+      if (!mullMatch) continue;
+      const wm = mullMatch.cost*(1+markup);
+      windowsTotal += wm*qty;
+      taxTotal += wm*tax*qty;
+      // no labor on mull bars
+      continue;
+    }
+    if (COMBO_TYPES.includes(type)) {
+      const baseType = type.replace('COMBO_','');
+      const units = parseInt(g('w'+i+'-combounits'))||2;
+      const unitWidth = width/units;
+      const unitMatch = findPrice(baseType,unitWidth,height,null);
+      const mullMatch = findPrice('MULL',0,height,null);
+      if (!unitMatch) continue;
+      const mullCost = mullMatch?mullMatch.cost:91.30;
+      const totalPGT = (unitMatch.cost*units)+(mullCost*(units-1));
+      const wm = totalPGT*(1+markup);
+      windowsTotal += wm*qty;
+      taxTotal += wm*tax*qty;
+      laborTotal += (parseFloat(g('labor'))||487)*units*qty;
+      continue;
+    }
+    const match = findPrice(type,width,height,cfg);
+    if (!match) continue;
+    const withMarkup = match.cost*(1+markup);
+    windowsTotal += withMarkup*qty;
+    taxTotal += withMarkup*tax*qty;
+    laborTotal += getLaborCost(type,cfg,qty);
+  }
+
+  const permit = parseFloat(g('permitCost'))||0;
+  const misc = parseFloat(g('miscCost'))||0;
+  document.getElementById('totWindows').textContent = fmt(windowsTotal);
+  document.getElementById('totTax').textContent = fmt(taxTotal);
+  document.getElementById('totLabor').textContent = fmt(laborTotal);
+  document.getElementById('totPermit').textContent = fmt(permit);
+  document.getElementById('totMisc').textContent = fmt(misc);
+  document.getElementById('totGrand').textContent = fmt(windowsTotal+taxTotal+laborTotal+permit+misc);
+}
+
+function addWindow(data) {
+  winCount++;
+  const id = winCount;
+  const displayNum = document.querySelectorAll('.win-card').length + 1;
+  const div = document.createElement('div');
+  div.className='win-card'; div.id='win-'+id;
+  const typeOpts = Object.entries(typeLabels).map(([k,v])=>`<option value="${k}">${v}</option>`).join('');
+  div.innerHTML = `
+    <div class="win-header">
+      <span class="win-label">Window ${displayNum}</span>
+      <button class="del-btn" onclick="removeWin(${id})">Remove</button>
+    </div>
+    <div class="field">
+      <label>Window Type</label>
+      <select id="w${id}-type" onchange="updatePrice(${id})">
+        <option value="">-- select type --</option>
+        ${typeOpts}
+      </select>
+    </div>
+    <div class="config-field" id="w${id}-configfield">
+      <div class="field">
+        <label>Panel Configuration</label>
+        <select id="w${id}-config" onchange="updatePrice(${id})">
+          <option value="">-- config --</option>
+        </select>
+      </div>
+    </div>
+    <div class="config-field" id="w${id}-combofield">
+      <div class="field">
+        <label>Number of Units in Combo</label>
+        <select id="w${id}-combounits" onchange="updatePrice(${id})">
+          <option value="2">2 Unit</option>
+          <option value="3">3 Unit</option>
+        </select>
+      </div>
+    </div>
+    <div class="config-field" id="w${id}-legfield">
+      <div class="field">
+        <label>Leg Height</label>
+        <input type="number" id="w${id}-leg" placeholder='e.g. 6"' inputmode="decimal" step="0.25" oninput="updatePrice(${id})">
+      </div>
+    </div>
+    <div class="row3">
+      <div class="field"><label>Width</label><input type="number" id="w${id}-width" placeholder="36" inputmode="decimal" step="0.125" oninput="updatePrice(${id})"></div>
+      <div class="field"><label>Height</label><input type="number" id="w${id}-height" placeholder="49" inputmode="decimal" step="0.125" oninput="updatePrice(${id})"></div>
+      <div class="field"><label>Qty</label><input type="number" id="w${id}-qty" value="1" min="1" inputmode="numeric" onchange="updatePrice(${id})"></div>
+    </div>
+    <div class="field"><label>Room / Notes</label><input type="text" id="w${id}-notes" placeholder="Living room, bedroom..." autocomplete="off"></div>
+    <div class="price-box" id="w${id}-pricebox"></div>
+  `;
+  document.getElementById('windowList').appendChild(div);
+
+  if (data) {
+    set('w'+id+'-type', data.type);
+    set('w'+id+'-width', data.width);
+    set('w'+id+'-height', data.height);
+    set('w'+id+'-qty', data.qty);
+    set('w'+id+'-notes', data.notes);
+    // Config needs to be set after type triggers the dropdown population
+    if (data.combounits) set('w'+id+'-combounits', data.combounits);
+    if (data.leg) set('w'+id+'-leg', data.leg);
+    if (data.config) setTimeout(() => { set('w'+id+'-config', data.config); updatePrice(id); }, 50);
+    else updatePrice(id);
+  } else {
+    div.scrollIntoView({behavior:'smooth',block:'start'});
+  }
+}
+
+function removeWin(id) { const el=document.getElementById('win-'+id); if(el) el.remove(); renumber(); updateTotals(); }
+function renumber() { document.querySelectorAll('.win-card').forEach((c,i)=>{ const l=c.querySelector('.win-label'); if(l) l.textContent='Window '+(i+1); }); }
+function set(id,val) { const el=document.getElementById(id); if(el&&val!==undefined&&val!==null) el.value=val; }
+function g(id) { const el=document.getElementById(id); return el?el.value.trim():''; }
+
+function collectData() {
+  const wins=[];
+  for(let i=1;i<=winCount;i++) {
+    if(!document.getElementById('win-'+i)) continue;
+    wins.push({type:g('w'+i+'-type'),config:g('w'+i+'-config'),combounits:g('w'+i+'-combounits'),leg:g('w'+i+'-leg'),width:g('w'+i+'-width'),height:g('w'+i+'-height'),qty:g('w'+i+'-qty'),notes:g('w'+i+'-notes')});
+  }
+  return {jobNum:g('jobNum'),jobDate:g('jobDate'),custName:g('custName'),custPhone:g('custPhone'),custAddr:g('custAddr'),markup:g('markup'),taxRate:g('taxRate'),labor:g('labor'),sgdLabor:g('sgdLabor'),fdLabor:g('fdLabor'),tolerance:g('tolerance'),permitCost:g('permitCost'),miscCost:g('miscCost'),windows:wins,savedAt:new Date().toLocaleString()};
+}
+
+function saveJob() { const d=collectData(); localStorage.setItem('est_'+(d.jobNum||Date.now()),JSON.stringify(d)); showToast('Estimate saved!'); }
+
+function getSaved() {
+  const jobs=[];
+  for(let i=0;i<localStorage.length;i++) { const k=localStorage.key(i); if(k&&k.startsWith('est_')) { try{jobs.push({key:k,data:JSON.parse(localStorage.getItem(k))});}catch(e){} } }
+  return jobs.sort((a,b)=>a.data.savedAt<b.data.savedAt?1:-1);
+}
+
+function openPanel() {
+  const jobs=getSaved();
+  const list=document.getElementById('savedList');
+  if(!jobs.length) { list.innerHTML='<div class="no-jobs">No saved estimates yet</div>'; }
+  else { list.innerHTML=jobs.map(j=>`<div class="saved-job"><div class="saved-job-info"><div class="saved-job-name">${j.data.custName||'No name'} &mdash; #${j.data.jobNum||'—'}</div><div class="saved-job-meta">${(j.data.windows||[]).length} window(s) &nbsp;&middot;&nbsp; ${j.data.savedAt}</div></div><div class="saved-job-btns"><button class="load-job-btn" onclick="loadJob('${j.key}')">Load</button><button class="del-job-btn" onclick="deleteJob('${j.key}')">Del</button></div></div>`).join(''); }
+  document.getElementById('overlay').classList.add('show');
+}
+
+function loadJob(key) {
+  const raw=localStorage.getItem(key); if(!raw) return;
+  const data=JSON.parse(raw);
+  resetForm();
+  set('jobNum',data.jobNum); set('jobDate',data.jobDate); set('custName',data.custName); set('custPhone',data.custPhone); set('custAddr',data.custAddr);
+  if(data.markup) set('markup',data.markup); if(data.taxRate) set('taxRate',data.taxRate);
+  if(data.labor) set('labor',data.labor); if(data.sgdLabor) set('sgdLabor',data.sgdLabor);
+  if(data.tolerance) set('tolerance',data.tolerance);
+  if(data.permitCost!==undefined) set('permitCost',data.permitCost);
+  if(data.miscCost!==undefined) set('miscCost',data.miscCost);
+  (data.windows||[]).forEach(w=>addWindow(w));
+  closeOverlay(); showToast('Estimate loaded!'); window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function deleteJob(key) { if(!confirm('Delete this saved estimate?')) return; localStorage.removeItem(key); openPanel(); }
+function closePanelClick(e) { if(e.target===document.getElementById('overlay')) closeOverlay(); }
+function closeOverlay() { document.getElementById('overlay').classList.remove('show'); }
+function clearAll() { if(!confirm('Clear everything and start a new estimate?')) return; resetForm(); showToast('Ready for new estimate'); }
+
+function resetForm() {
+  ['jobNum','jobDate','custName','custPhone','custAddr'].forEach(id=>set(id,''));
+  document.getElementById('windowList').innerHTML='';
+  winCount=0;
+  document.getElementById('jobDate').valueAsDate=new Date();
+  updateTotals();
+  addWindow();
+}
+
+function generateOutput() {
+  const data=collectData();
+  let out='=== Window Estimate ===\n';
+  out+=`Job #:    ${data.jobNum||'—'}\nDate:     ${data.jobDate||'—'}\nCustomer: ${data.custName||'—'}\nPhone:    ${data.custPhone||'—'}\nAddress:  ${data.custAddr||'—'}\n\n--- Windows ---\n`;
+  (data.windows||[]).forEach((w,i)=>{
+    const match=findPrice(w.type,parseFloat(w.width)||0,parseFloat(w.height)||0,w.config);
+    const qty=parseInt(w.qty)||1;
+    out+=`\nWindow ${i+1}: ${typeLabels[w.type]||w.type}${w.config?' — '+w.config:''}\n`;
+    out+=`  Size: ${w.width}" W x ${w.height}" H  Qty: ${qty}\n`;
+    if(w.notes) out+=`  Notes: ${w.notes}\n`;
+    if(match) {
+      const p=calcWindowPrice(match.cost);
+      const labor=getLaborCost(w.type,w.config,qty);
+      const lineTotal=(p.withMarkup*qty)+(p.tax*qty)+labor;
+      out+=`  PGT Cost: ${fmt(match.cost)}  Customer Price: ${fmt(p.withTax)} each  Labor: ${fmt(labor)}  Line Total: ${fmt(lineTotal)}\n`;
+    } else { out+=`  No price match found\n`; }
+  });
+  out+=`\n--- Totals ---\n`;
+  out+=`Windows: ${document.getElementById('totWindows').textContent}\nTax:     ${document.getElementById('totTax').textContent}\nLabor:   ${document.getElementById('totLabor').textContent}\nPermit:  ${document.getElementById('totPermit').textContent}\nMisc:    ${document.getElementById('totMisc').textContent}\nTOTAL:   ${document.getElementById('totGrand').textContent}\n`;
+  if(navigator.clipboard) navigator.clipboard.writeText(out).then(()=>showToast('Copied!'));
+}
+
+function emailJob() {
+  const data=collectData();
+  const subject=encodeURIComponent(`Window Estimate — ${data.custName||'Customer'} #${data.jobNum||''}`);
+  let body=`Window Estimate\n\nJob #: ${data.jobNum||'—'}\nCustomer: ${data.custName||'—'}\nAddress: ${data.custAddr||'—'}\n\nWindows:\n`;
+  (data.windows||[]).forEach((w,i)=>{
+    const match=findPrice(w.type,parseFloat(w.width)||0,parseFloat(w.height)||0,w.config);
+    body+=`\n${i+1}. ${typeLabels[w.type]||w.type}${w.config?' — '+w.config:''} — ${w.width}" x ${w.height}" (qty: ${w.qty||1})`;
+    if(match){const p=calcWindowPrice(match.cost);const labor=getLaborCost(w.type,w.config,parseInt(w.qty)||1);body+=`\n   Line Total: ${fmt((p.withMarkup*(parseInt(w.qty)||1))+(p.tax*(parseInt(w.qty)||1))+labor)}`;}
+    if(w.notes) body+=`\n   ${w.notes}`;
+  });
+  body+=`\n\nPermit: ${document.getElementById('totPermit').textContent}\nMisc: ${document.getElementById('totMisc').textContent}\nTOTAL: ${document.getElementById('totGrand').textContent}`;
+  window.location.href=`mailto:?subject=${subject}&body=${encodeURIComponent(body)}`;
+}
+
+function showToast(msg) { const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2500); }
+
+['markup','taxRate','labor','sgdLabor','fdLabor','tolerance','permitCost','miscCost'].forEach(id=>{
+  const el = document.getElementById(id);
+  if(el) el.addEventListener('input',()=>{ for(let i=1;i<=winCount;i++){if(document.getElementById('win-'+i)) updatePrice(i);} });
+});
+
+document.getElementById('jobDate').valueAsDate=new Date();
+addWindow();
+</script>
+</body>
+</html>
