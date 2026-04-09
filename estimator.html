@@ -110,8 +110,14 @@
   <div class="field"><label>Phone</label><input type="tel" id="custPhone" placeholder="(941) 555-0000"></div>
   <div class="field"><label>Address</label><input type="text" id="custAddr" placeholder="123 Main St, Parrish FL" autocomplete="off"></div>
   <div class="row2">
-    <div class="field"><label>Est. Install Date</label><input type="date" id="installDate"></div>
-    <div class="field"><label>Install Days</label><input type="number" id="installDays" placeholder="e.g. 3" inputmode="numeric" min="1"></div>
+    <div class="field"><label>Tentative Install</label><input type="text" id="installDate" placeholder="e.g. June / July" autocomplete="off"></div>
+    <div class="field"><label>Install Days</label>
+      <div style="display:flex;gap:8px">
+        <input type="number" id="installDays" placeholder="e.g. 3" inputmode="numeric" min="1" style="flex:1">
+        <button onclick="calcInstallDays()" style="min-height:var(--tap);padding:0 14px;background:var(--blue-light);color:var(--blue);border:1.5px solid var(--blue);border-radius:10px;font-size:0.85rem;font-weight:600;cursor:pointer;white-space:nowrap">Auto</button>
+      </div>
+      <div class="settings-note">3-4 windows/day · 1 day per door</div>
+    </div>
   </div>
   <div class="field"><label>Job Notes / Scope</label><textarea id="jobNotes" placeholder="Scope of work, special instructions, access notes..." rows="3" style="width:100%;font-size:1rem;padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;font-family:inherit;resize:vertical"></textarea></div>
 </div>
@@ -931,6 +937,29 @@ function resetForm() {
   document.getElementById('windowList').innerHTML='';
   winCount=0;
   
+
+function calcInstallDays() {
+  let windows = 0, doors = 0;
+  for (let i=1; i<=winCount; i++) {
+    if (!document.getElementById('win-'+i)) continue;
+    const type = g('w'+i+'-type');
+    if (!type) continue;
+    const qty = parseInt(g('w'+i+'-qty'))||1;
+    if (['SGD770NS','SGD5570NS','SGD5570','FD5555'].includes(type)) {
+      doors += qty;
+    } else if (['MULLBAR','MISC'].includes(type)) {
+      // don't count
+    } else {
+      windows += qty;
+    }
+  }
+  // 3-4 windows per day = use 3.5 average, round up
+  const windowDays = Math.ceil(windows / 3.5);
+  const doorDays = doors;
+  const total = Math.max(1, windowDays + doorDays);
+  set('installDays', total);
+  showToast(`Est. ${total} day${total>1?'s':''} — ${windows} window${windows!==1?'s':''}, ${doors} door${doors!==1?'s':''}`);
+}
 function checkPin() {
   const pin = document.getElementById('pinInput').value.trim();
   if (pin === '777') {
@@ -1001,6 +1030,29 @@ function showToast(msg) { const t=document.getElementById('toast'); t.textConten
 });
 
 
+
+function calcInstallDays() {
+  let windows = 0, doors = 0;
+  for (let i=1; i<=winCount; i++) {
+    if (!document.getElementById('win-'+i)) continue;
+    const type = g('w'+i+'-type');
+    if (!type) continue;
+    const qty = parseInt(g('w'+i+'-qty'))||1;
+    if (['SGD770NS','SGD5570NS','SGD5570','FD5555'].includes(type)) {
+      doors += qty;
+    } else if (['MULLBAR','MISC'].includes(type)) {
+      // don't count
+    } else {
+      windows += qty;
+    }
+  }
+  // 3-4 windows per day = use 3.5 average, round up
+  const windowDays = Math.ceil(windows / 3.5);
+  const doorDays = doors;
+  const total = Math.max(1, windowDays + doorDays);
+  set('installDays', total);
+  showToast(`Est. ${total} day${total>1?'s':''} — ${windows} window${windows!==1?'s':''}, ${doors} door${doors!==1?'s':''}`);
+}
 function checkPin() {
   const pin = document.getElementById('pinInput').value.trim();
   if (pin === '777') {
@@ -1310,7 +1362,7 @@ function openReport(mode) {
       </table>
     </div>`;
 
-  const installDateFmt = data.installDate ? new Date(data.installDate+'T12:00:00').toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}) : '_______________';
+  const installDateFmt = data.installDate || '_______________';
   const installDaysVal = data.installDays || '___';
 
   const boilerplateHTML = !isDealer ? `
