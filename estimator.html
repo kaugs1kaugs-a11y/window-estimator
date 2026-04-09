@@ -70,10 +70,31 @@
   .toast { position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%); background: #1a1a1a; color: #fff; padding: 12px 24px; border-radius: 999px; font-size: 0.9rem; font-weight: 600; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 999; white-space: nowrap; }
   .toast.show { opacity: 1; }
   .settings-note { font-size: 0.78rem; color: var(--muted); margin-top: 4px; }
+  #lockScreen { position: fixed; inset: 0; background: var(--blue); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem; }
+  #lockScreen h2 { color: #fff; font-size: 1.4rem; margin-bottom: 0.5rem; }
+  #lockScreen p { color: rgba(255,255,255,0.7); font-size: 0.9rem; margin-bottom: 2rem; }
+  #pinInput { font-size: 2rem; text-align: center; letter-spacing: 0.5rem; width: 160px; min-height: 70px; border: none; border-radius: 14px; padding: 0 1rem; margin-bottom: 1rem; }
+  #pinInput:focus { outline: 3px solid #fff; }
+  #unlockBtn { width: 160px; min-height: 60px; background: #fff; color: var(--blue); border: none; border-radius: 14px; font-size: 1.1rem; font-weight: 700; cursor: pointer; }
+  #pinError { color: #ffcccc; font-size: 0.9rem; margin-top: 0.75rem; min-height: 1.2rem; }
+  #appContent { display: none; }
+  .mic-row { display: flex; gap: 8px; }
+  .mic-row input { flex: 1; }
+  .mic-btn { min-height: var(--tap); min-width: var(--tap); border-radius: 10px; border: 1.5px solid var(--border); background: #fff; font-size: 1.2rem; cursor: pointer; flex-shrink: 0; }
+  .mic-btn.listening { background: var(--red-light); border-color: var(--red); animation: pulse 1s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
 </style>
 </head>
 <body>
 
+<div id="lockScreen">
+  <h2>🔒 Window Estimator</h2>
+  <p>Enter your PIN to continue</p>
+  <input type="password" id="pinInput" inputmode="numeric" maxlength="10" placeholder="···" onkeydown="if(event.key==='Enter') checkPin()">
+  <button id="unlockBtn" onclick="checkPin()">Unlock</button>
+  <div id="pinError"></div>
+</div>
+<div id="appContent">
 <header>
   <h1>Window Estimator</h1>
   <p>PGT pricing · 35.77% markup · 7% tax · $487 window / $771.77 SGD panel / $1,200 FD</p>
@@ -88,6 +109,11 @@
   <div class="field"><label>Customer Name</label><input type="text" id="custName" placeholder="Last, First" autocomplete="off"></div>
   <div class="field"><label>Phone</label><input type="tel" id="custPhone" placeholder="(941) 555-0000"></div>
   <div class="field"><label>Address</label><input type="text" id="custAddr" placeholder="123 Main St, Parrish FL" autocomplete="off"></div>
+  <div class="row2">
+    <div class="field"><label>Est. Install Date</label><input type="date" id="installDate"></div>
+    <div class="field"><label>Install Days</label><input type="number" id="installDays" placeholder="e.g. 3" inputmode="numeric" min="1"></div>
+  </div>
+  <div class="field"><label>Job Notes / Scope</label><textarea id="jobNotes" placeholder="Scope of work, special instructions, access notes..." rows="3" style="width:100%;font-size:1rem;padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;font-family:inherit;resize:vertical"></textarea></div>
 </div>
 
 <div class="section">
@@ -118,6 +144,11 @@
     <input type="number" id="tolerance" value="2" inputmode="decimal" step="0.5">
   </div>
   <div class="divider"></div>
+  <div class="field">
+    <label>Box Screen Cost $</label>
+    <input type="number" id="screenCost" value="350" inputmode="numeric">
+    <div class="settings-note">Per screen, markup & tax applied</div>
+  </div>
   <div class="row2">
     <div class="field">
       <label>Permit $</label>
@@ -150,6 +181,10 @@
   <button class="load-btn" onclick="openPanel()">Load Job</button>
 </div>
 <button class="copy-btn" onclick="generateOutput()">Copy Estimate Summary</button>
+<div class="action-row" style="margin-top:0.75rem">
+  <button class="save-btn" style="background:#1a3a6c;color:#fff;border-color:#1a3a6c" onclick="openReport('customer')">Customer Report</button>
+  <button class="save-btn" style="background:#8a3a00;color:#fff;border-color:#8a3a00" onclick="openReport('dealer')">Dealer Report</button>
+</div>
 <button class="email-btn" onclick="emailJob()">Email Estimate</button>
 <button class="clear-btn" onclick="clearAll()">Clear / New Job</button>
 
@@ -185,6 +220,8 @@ const FD_TYPES = ['FD5555'];
 const COMBO_TYPES = ['COMBO_SH5500'];
 // Is this a mull bar?
 const MULL_TYPES = ['MULLBAR'];
+// Is this a misc item?
+const MISC_ITEM_TYPES = ['MISC'];
 // Is this an AR5520?
 const AR_TYPES = ['AR5520_HC','AR5520_EB'];
 
@@ -265,6 +302,7 @@ const typeLabels = {
   'SGD770NS':'Sliding Glass Door 770NS','SGD5570NS':'Sliding Glass Door 5570NS','SGD5570':'Sliding Glass Door 5570',
   'COMBO_SH5500':'Combo — Single Hung 5500 (2-3 unit)',
   'MULLBAR':'Mull Bar (standalone)',
+  'MISC':'Miscellaneous / Custom',
   'AR5520_HC':'AR5520 Half Circle',
   'AR5520_EB':'AR5520 Eyebrow'
 };
@@ -329,8 +367,8 @@ function findARPrice(type, width, height, leg) {
 
 function updatePrice(id) {
   const type = g('w'+id+'-type');
-  const width = parseFloat(g('w'+id+'-width')) || 0;
-  const height = parseFloat(g('w'+id+'-height')) || 0;
+  const width = getDimValue('w'+id+'-width','w'+id+'-width-custom');
+  const height = getDimValue('w'+id+'-height','w'+id+'-height-custom');
   const qty = parseInt(g('w'+id+'-qty')) || 1;
   const cfg = g('w'+id+'-config');
   const box = document.getElementById('w'+id+'-pricebox');
@@ -342,10 +380,21 @@ function updatePrice(id) {
     if (isSGD(type) || FD_TYPES.includes(type)) {
       cfgField.classList.add('show');
       if (comboField) comboField.classList.remove('show');
+      const miscFieldSGD = document.getElementById('w'+id+'-miscfield');
+      if (miscFieldSGD) miscFieldSGD.classList.remove('show');
+      const screenField = document.getElementById('w'+id+'-screenfield');
+      if (screenField) screenField.style.display = isSGD(type) ? 'block' : 'none';
       const cfgSel = document.getElementById('w'+id+'-config');
       const configs = TYPE_CONFIGS[type] || ['XX'];
       const curVal = cfgSel.value;
       cfgSel.innerHTML = '<option value="">-- config --</option>' + configs.map(c=>`<option value="${c}"${c===curVal?' selected':''}>${c}</option>`).join('');
+    } else if (MISC_ITEM_TYPES.includes(type)) {
+      cfgField.classList.remove('show');
+      if (comboField) comboField.classList.remove('show');
+      const legFieldM = document.getElementById('w'+id+'-legfield');
+      if (legFieldM) legFieldM.classList.remove('show');
+      const miscField = document.getElementById('w'+id+'-miscfield');
+      if (miscField) miscField.classList.add('show');
     } else if (type === 'AR5520_HC') {
       cfgField.classList.remove('show');
       if (comboField) comboField.classList.remove('show');
@@ -369,6 +418,10 @@ function updatePrice(id) {
       if (comboField) comboField.classList.remove('show');
       const legFieldElse = document.getElementById('w'+id+'-legfield');
       if (legFieldElse) legFieldElse.classList.remove('show');
+      const miscFieldElse = document.getElementById('w'+id+'-miscfield');
+      if (miscFieldElse) miscFieldElse.classList.remove('show');
+      const screenFieldElse = document.getElementById('w'+id+'-screenfield');
+      if (screenFieldElse) screenFieldElse.style.display = 'none';
     }
   }
 
@@ -403,7 +456,9 @@ function updatePrice(id) {
     const withTax = withMarkup * (1+tax);
     const taxAmt = withMarkup * tax;
     const labor = laborPer * units * qty;
-    const lineTotal = (withMarkup * qty) + (taxAmt * qty) + labor;
+    const adder = parseFloat(g('w'+id+'-adder'))||0;
+    const adderDesc = g('w'+id+'-adderdesc')||'Additional charge';
+    const lineTotal = (withMarkup * qty) + (taxAmt * qty) + labor + adder;
 
     box.innerHTML = `
       <div class="price-row"><span>${units} units @ ${fmt(unitMatch.cost)} each</span><span>${fmt(unitCostTotal)}</span></div>
@@ -412,9 +467,36 @@ function updatePrice(id) {
       <div class="price-row"><span>After markup (${g('markup')||35.77}%)</span><span>${fmt(withMarkup)}</span></div>
       <div class="price-row"><span>Tax (${g('taxRate')||7}%)</span><span>${fmt(taxAmt)}</span></div>
       <div class="price-row"><span>Labor (${units} units × ${fmt(laborPer)})</span><span>${fmt(labor)}</span></div>
+      ${adder?`<div class="price-row"><span>${adderDesc}</span><span>${fmt(adder)}</span></div>`:''}
       ${qty>1?`<div class="price-row"><span>× ${qty} combos</span><span></span></div>`:''}
       <div class="price-row total"><span>Line Total</span><span>${fmt(lineTotal)}</span></div>
       <div class="match-note">Each unit matched to ${unitMatch.matchW}" × ${unitMatch.matchH}" · ${mullCount} mull bar${mullCount>1?'s':''}</div>
+    `;
+    box.classList.add('show'); updateTotals(); return;
+  }
+
+  // MISC / CUSTOM ITEM
+  if (MISC_ITEM_TYPES.includes(type)) {
+    const markup = parseFloat(g('markup'))/100||0.3577;
+    const tax = parseFloat(g('taxRate'))/100||0.07;
+    const cost = parseFloat(g('w'+id+'-misccost'))||0;
+    const miscLabor = parseFloat(g('w'+id+'-misclabor'))||0;
+    const desc = g('w'+id+'-miscdesc')||'Miscellaneous item';
+    if (!cost) { box.innerHTML='<div class="price-nomatch">Enter item cost above</div>'; box.classList.add('show'); updateTotals(); return; }
+    const withMarkup = cost * (1+markup);
+    const taxAmt = withMarkup * tax;
+    const adder = parseFloat(g('w'+id+'-adder'))||0;
+    const adderDesc = g('w'+id+'-adderdesc')||'Additional charge';
+    const lineTotal = (withMarkup*qty) + (taxAmt*qty) + (miscLabor*qty) + adder;
+    box.innerHTML = `
+      <div class="price-row"><span>Cost</span><span>${fmt(cost)}</span></div>
+      <div class="price-row"><span>After markup (${g('markup')||35.77}%)</span><span>${fmt(withMarkup)}</span></div>
+      <div class="price-row"><span>Tax (${g('taxRate')||7}%)</span><span>${fmt(taxAmt)}</span></div>
+      <div class="price-row"><span>Labor</span><span>${fmt(miscLabor)}</span></div>
+      ${qty>1?`<div class="price-row"><span>× ${qty}</span><span></span></div>`:''}
+      ${adder?`<div class="price-row"><span>${adderDesc}</span><span>${fmt(adder)}</span></div>`:''}
+      <div class="price-row total"><span>Line Total</span><span>${fmt(lineTotal)}</span></div>
+      <div class="match-note">${desc}</div>
     `;
     box.classList.add('show'); updateTotals(); return;
   }
@@ -432,7 +514,9 @@ function updatePrice(id) {
     }
     const p = calcWindowPrice(arMatch.cost);
     const lineLabor = labor * qty;
-    const lineTotal = (p.withMarkup*qty) + (p.tax*qty) + lineLabor;
+    const adder = parseFloat(g('w'+id+'-adder'))||0;
+    const adderDesc = g('w'+id+'-adderdesc')||'Additional charge';
+    const lineTotal = (p.withMarkup*qty) + (p.tax*qty) + lineLabor + adder;
     const isHC = type==='AR5520_HC';
     box.innerHTML = `
       <div class="price-row"><span>PGT cost</span><span>${fmt(arMatch.cost)}</span></div>
@@ -440,6 +524,7 @@ function updatePrice(id) {
       <div class="price-row"><span>Tax</span><span>${fmt(p.tax)}</span></div>
       <div class="price-row"><span>Labor (${qty} × ${fmt(labor)})</span><span>${fmt(lineLabor)}</span></div>
       ${qty>1?`<div class="price-row"><span>× ${qty}</span><span></span></div>`:''}
+      ${adder?`<div class="price-row"><span>${adderDesc}</span><span>${fmt(adder)}</span></div>`:''}
       <div class="price-row total"><span>Line Total</span><span>${fmt(lineTotal)}</span></div>
       <div class="match-note">Matched to ${arMatch.w}" × ${arMatch.h}"${arMatch.leg?' leg: '+arMatch.leg+'"':''}</div>
     `;
@@ -473,7 +558,15 @@ function updatePrice(id) {
   const labor = getLaborCost(type, cfg, qty);
   const lineWindows = p.withMarkup * qty;
   const lineTax = p.tax * qty;
-  const lineTotal = lineWindows + lineTax + labor;
+  const adder = parseFloat(g('w'+id+'-adder'))||0;
+  const adderDesc = g('w'+id+'-adderdesc')||'Additional charge';
+  // Screen cost for SGDs
+  const screenOpt = g('w'+id+'-screen');
+  const screenQty = parseInt(g('w'+id+'-screenqty'))||1;
+  const screenUnitCost = parseFloat(g('screenCost'))||350;
+  const screenP = (screenOpt==='Box Screen') ? calcWindowPrice(screenUnitCost*screenQty) : null;
+  const screenTotal = screenP ? screenP.withMarkup + screenP.tax : 0;
+  const lineTotal = lineWindows + lineTax + labor + adder + screenTotal;
 
   let laborNote;
   if (isSGD(type)) { laborNote = `${SGD_PANELS[cfg]||2} panels × ${fmt(parseFloat(g('sgdLabor'))||771.77)}`; }
@@ -485,6 +578,8 @@ function updatePrice(id) {
     <div class="price-row"><span>After markup (${g('markup')||35.77}%)</span><span>${fmt(p.withMarkup)}</span></div>
     <div class="price-row"><span>Tax (${g('taxRate')||7}%)</span><span>${fmt(p.tax)}</span></div>
     <div class="price-row"><span>Labor (${laborNote})</span><span>${fmt(labor)}</span></div>
+    ${screenP?`<div class="price-row"><span>Box Screen (${screenQty}) w/ markup & tax</span><span>${fmt(screenTotal)}</span></div>`:''}
+    ${adder?`<div class="price-row"><span>${adderDesc}</span><span>${fmt(adder)}</span></div>`:''}
     ${qty>1?`<div class="price-row"><span>× ${qty} windows</span><span></span></div>`:''}
     <div class="price-row total"><span>Line Total</span><span>${fmt(lineTotal)}</span></div>
     <div class="match-note">${match.exact?'Exact match':`Matched to ${match.matchW}" × ${match.matchH}"`}${match.cfg?' · Config: '+match.cfg:''}</div>
@@ -500,10 +595,21 @@ function updateTotals() {
 
   for (let i=1; i<=winCount; i++) {
     if (!document.getElementById('win-'+i)) continue;
-    const type=g('w'+i+'-type'), width=parseFloat(g('w'+i+'-width'))||0, height=parseFloat(g('w'+i+'-height'))||0;
+    const type=g('w'+i+'-type'), width=getDimValue('w'+i+'-width','w'+i+'-width-custom'), height=getDimValue('w'+i+'-height','w'+i+'-height-custom');
     const qty=parseInt(g('w'+i+'-qty'))||1, cfg=g('w'+i+'-config');
     if (!type||!width||!height) continue;
     if ((isSGD(type)||FD_TYPES.includes(type))&&!cfg) continue;
+    if (MISC_ITEM_TYPES.includes(type)) {
+      const cost = parseFloat(g('w'+i+'-misccost'))||0;
+      const miscLabor = parseFloat(g('w'+i+'-misclabor'))||0;
+      if (!cost) continue;
+      const wm = cost*(1+markup);
+      windowsTotal += wm*qty;
+      taxTotal += wm*tax*qty;
+      laborTotal += miscLabor*qty;
+      laborTotal += parseFloat(g('w'+i+'-adder'))||0;
+      continue;
+    }
     if (AR_TYPES.includes(type)) {
       const leg = parseFloat(g('w'+i+'-leg'))||0;
       const arMatch = findARPrice(type,width,height,leg);
@@ -544,6 +650,10 @@ function updateTotals() {
     windowsTotal += withMarkup*qty;
     taxTotal += withMarkup*tax*qty;
     laborTotal += getLaborCost(type,cfg,qty);
+    laborTotal += parseFloat(g('w'+i+'-adder'))||0;
+    // Screen cost
+    const scrOpt=g('w'+i+'-screen'),scrQty=parseInt(g('w'+i+'-screenqty'))||1,scrCost=parseFloat(g('screenCost'))||350;
+    if(scrOpt==='Box Screen'){const sp=calcWindowPrice(scrCost*scrQty);windowsTotal+=sp.withMarkup;taxTotal+=sp.tax;}
   }
 
   const permit = parseFloat(g('permitCost'))||0;
@@ -566,7 +676,10 @@ function addWindow(data) {
   div.innerHTML = `
     <div class="win-header">
       <span class="win-label">Window ${displayNum}</span>
-      <button class="del-btn" onclick="removeWin(${id})">Remove</button>
+      <div style="display:flex;gap:8px">
+        <button class="del-btn" style="background:var(--blue-light);color:var(--blue);border-color:var(--blue)" onclick="duplicateWin(${id})">Copy</button>
+        <button class="del-btn" onclick="removeWin(${id})">Remove</button>
+      </div>
     </div>
     <div class="field">
       <label>Window Type</label>
@@ -581,6 +694,36 @@ function addWindow(data) {
         <select id="w${id}-config" onchange="updatePrice(${id})">
           <option value="">-- config --</option>
         </select>
+      </div>
+      <div class="field" id="w${id}-screenfield" style="display:none">
+        <label>Screen Option</label>
+        <div class="row3">
+          <select id="w${id}-screen" onchange="updatePrice(${id})" style="grid-column:span 2">
+            <option value="No Screen">No Screen</option>
+            <option value="Box Screen">Box Screen</option>
+            <option value="Screen Included">Screen Included</option>
+          </select>
+          <input type="number" id="w${id}-screenqty" value="1" min="1" inputmode="numeric" placeholder="Qty" onchange="updatePrice(${id})">
+        </div>
+        <div class="settings-note" style="margin-top:4px">Box Screen cost set in Pricing Settings</div>
+      </div>
+    </div>
+    <div class="config-field" id="w${id}-miscfield">
+      <div class="row2">
+        <div class="field">
+          <label>Item Cost $</label>
+          <input type="number" id="w${id}-misccost" placeholder="0.00" inputmode="decimal" step="0.01" oninput="updatePrice(${id})">
+          <div class="settings-note">Before markup & tax</div>
+        </div>
+        <div class="field">
+          <label>Labor $</label>
+          <input type="number" id="w${id}-misclabor" placeholder="0.00" inputmode="decimal" step="0.01" oninput="updatePrice(${id})">
+          <div class="settings-note">Added to line total</div>
+        </div>
+      </div>
+      <div class="field">
+        <label>Description</label>
+        <input type="text" id="w${id}-miscdesc" placeholder="e.g. Picture window 48x60, custom unit..." autocomplete="off">
       </div>
     </div>
     <div class="config-field" id="w${id}-combofield">
@@ -599,11 +742,67 @@ function addWindow(data) {
       </div>
     </div>
     <div class="row3">
-      <div class="field"><label>Width</label><input type="number" id="w${id}-width" placeholder="36" inputmode="decimal" step="0.125" oninput="updatePrice(${id})"></div>
-      <div class="field"><label>Height</label><input type="number" id="w${id}-height" placeholder="49" inputmode="decimal" step="0.125" oninput="updatePrice(${id})"></div>
+      <div class="field"><label>Width</label>
+        <div class="mic-row">
+          <select id="w${id}-width" onchange="handleDimChange('w${id}-width','w${id}-width-custom',{});updatePrice(${id})" style="flex:1">
+            <option value="">--</option>
+            <option value="18.125">18.125"</option><option value="25.5">25.5"</option><option value="36">36"</option><option value="47">47"</option><option value="52.125">52.125"</option><option value="60">60"</option><option value="72">72"</option><option value="73">73"</option><option value="96">96"</option><option value="109">109"</option><option value="110">110"</option><option value="120">120"</option><option value="144">144"</option>
+            <option value="custom">Custom</option>
+          </select>
+          <button class="mic-btn" onclick="startMic('w${id}-width-custom',${id})">🎤</button>
+        </div>
+        <input type="number" id="w${id}-width-custom" placeholder='Custom"' inputmode="decimal" step="0.125" style="display:none;margin-top:6px;width:100%;min-height:var(--tap);font-size:1rem;padding:0 14px;border:1.5px solid var(--border);border-radius:10px" oninput="syncCustom('w${id}-width-custom','w${id}-width');updatePrice(${id})">
+      </div>
+      <div class="field"><label>Height</label>
+        <div class="mic-row">
+          <select id="w${id}-height" onchange="handleDimChange('w${id}-height','w${id}-height-custom',{});updatePrice(${id})" style="flex:1">
+            <option value="">--</option>
+            <option value="25">25"</option><option value="37">37"</option><option value="49">49"</option><option value="49.5">49.5"</option><option value="62">62"</option><option value="75">75"</option><option value="79">79"</option><option value="95">95"</option>
+            <option value="custom">Custom</option>
+          </select>
+          <button class="mic-btn" onclick="startMic('w${id}-height-custom',${id})">🎤</button>
+        </div>
+        <input type="number" id="w${id}-height-custom" placeholder='Custom"' inputmode="decimal" step="0.125" style="display:none;margin-top:6px;width:100%;min-height:var(--tap);font-size:1rem;padding:0 14px;border:1.5px solid var(--border);border-radius:10px" oninput="syncCustom('w${id}-height-custom','w${id}-height');updatePrice(${id})">
+      </div>
       <div class="field"><label>Qty</label><input type="number" id="w${id}-qty" value="1" min="1" inputmode="numeric" onchange="updatePrice(${id})"></div>
     </div>
-    <div class="field"><label>Room / Notes</label><input type="text" id="w${id}-notes" placeholder="Living room, bedroom..." autocomplete="off"></div>
+    <div class="row2">
+      <div class="field">
+        <label>Room</label>
+        <select id="w${id}-room">
+          <option value="">-- room --</option>
+          <option value="Living Room">Living Room</option><option value="Dining Room">Dining Room</option><option value="Kitchen">Kitchen</option><option value="Main Bedroom">Main Bedroom</option><option value="Bedroom 2">Bedroom 2</option><option value="Bedroom 3">Bedroom 3</option><option value="Bedroom 4">Bedroom 4</option><option value="Main Bath">Main Bath</option><option value="Bathroom 2">Bathroom 2</option><option value="Bathroom 3">Bathroom 3</option><option value="Office">Office</option><option value="Laundry">Laundry</option><option value="Garage">Garage</option><option value="Lanai/Patio">Lanai/Patio</option><option value="Foyer/Entry">Foyer/Entry</option><option value="Hallway">Hallway</option><option value="Stairwell">Stairwell</option><option value="Bonus Room">Bonus Room</option><option value="Nook">Nook</option><option value="Other">Other</option>
+        </select>
+      </div>
+      <div class="field"><label>Notes</label><input type="text" id="w${id}-notes" placeholder="Notes..." autocomplete="off"></div>
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label>Glass</label>
+        <select id="w${id}-glass">
+          <option value="Clear">Clear</option>
+          <option value="Low-E">Low-E</option>
+          <option value="Tinted">Tinted</option>
+          <option value="OBS">OBS (Obscure)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Frame Color</label>
+        <select id="w${id}-framecolor">
+          <option value="White">White</option>
+          <option value="Bronze">Bronze</option>
+          <option value="Almond">Almond</option>
+          <option value="Black">Black</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;margin-top:8px" id="w${id}-adderrow">
+      <button onclick="toggleAdder(${id})" style="min-height:44px;padding:0 16px;background:#fff8e8;color:#8a5a00;border:1.5px solid #b87c00;border-radius:10px;font-size:0.85rem;font-weight:600;cursor:pointer;white-space:nowrap">+ Add $</button>
+      <div style="display:none;flex:1" id="w${id}-adderfield">
+        <input type="number" id="w${id}-adder" placeholder="Extra charge $" inputmode="decimal" step="0.01" oninput="updatePrice(${id})" style="width:100%;min-height:44px;font-size:1rem;padding:0 14px;border:1.5px solid #b87c00;border-radius:10px">
+      </div>
+      <input type="text" id="w${id}-adderdesc" placeholder="Reason..." autocomplete="off" style="display:none;flex:1;min-height:44px;font-size:0.9rem;padding:0 14px;border:1.5px solid var(--border);border-radius:10px" id="w${id}-adderdesc">
+    </div>
     <div class="price-box" id="w${id}-pricebox"></div>
   `;
   document.getElementById('windowList').appendChild(div);
@@ -617,6 +816,29 @@ function addWindow(data) {
     // Config needs to be set after type triggers the dropdown population
     if (data.combounits) set('w'+id+'-combounits', data.combounits);
     if (data.leg) set('w'+id+'-leg', data.leg);
+    if (data.room) set('w'+id+'-room', data.room);
+    if (data.width) {
+      const wSel = document.getElementById('w'+id+'-width');
+      const wCustom = document.getElementById('w'+id+'-width-custom');
+      const wOpts = wSel ? Array.from(wSel.options).map(o=>o.value) : [];
+      if (wOpts.includes(String(data.width))) { set('w'+id+'-width', data.width); }
+      else { if(wSel) wSel.value='custom'; if(wCustom){wCustom.style.display='block';wCustom.value=data.width;} }
+    }
+    if (data.height) {
+      const hSel = document.getElementById('w'+id+'-height');
+      const hCustom = document.getElementById('w'+id+'-height-custom');
+      const hOpts = hSel ? Array.from(hSel.options).map(o=>o.value) : [];
+      if (hOpts.includes(String(data.height))) { set('w'+id+'-height', data.height); }
+      else { if(hSel) hSel.value='custom'; if(hCustom){hCustom.style.display='block';hCustom.value=data.height;} }
+    }
+    if (data.misccost) set('w'+id+'-misccost', data.misccost);
+    if (data.misclabor) set('w'+id+'-misclabor', data.misclabor);
+    if (data.miscdesc) set('w'+id+'-miscdesc', data.miscdesc);
+    if (data.adder) { set('w'+id+'-adder', data.adder); set('w'+id+'-adderdesc', data.adderdesc||''); toggleAdder(id); }
+    if (data.glass) set('w'+id+'-glass', data.glass);
+    if (data.framecolor) set('w'+id+'-framecolor', data.framecolor);
+    if (data.screen) set('w'+id+'-screen', data.screen);
+    if (data.screenqty) set('w'+id+'-screenqty', data.screenqty);
     if (data.config) setTimeout(() => { set('w'+id+'-config', data.config); updatePrice(id); }, 50);
     else updatePrice(id);
   } else {
@@ -624,6 +846,33 @@ function addWindow(data) {
   }
 }
 
+
+
+function toggleAdder(id) {
+  const field = document.getElementById('w'+id+'-adderfield');
+  const desc = document.getElementById('w'+id+'-adderdesc');
+  const btn = document.querySelector('#w'+id+'-adderrow button');
+  if (!field) return;
+  const showing = field.style.display !== 'none';
+  field.style.display = showing ? 'none' : 'flex';
+  if (desc) desc.style.display = showing ? 'none' : 'block';
+  if (btn) btn.textContent = showing ? '+ Add $' : '✕ Remove';
+  if (!showing) document.getElementById('w'+id+'-adder').focus();
+  if (showing) { set('w'+id+'-adder',''); updatePrice(id); }
+}
+function duplicateWin(id) {
+  const type = g('w'+id+'-type');
+  const cfg = g('w'+id+'-config');
+  const combounits = g('w'+id+'-combounits');
+  const leg = g('w'+id+'-leg');
+  const width = getDimValue('w'+id+'-width','w'+id+'-width-custom');
+  const height = getDimValue('w'+id+'-height','w'+id+'-height-custom');
+  const qty = g('w'+id+'-qty');
+  const room = g('w'+id+'-room');
+  const notes = g('w'+id+'-notes');
+  addWindow({type,config:cfg,combounits,leg,width,height,qty,room,notes});
+  showToast('Window duplicated!');
+}
 function removeWin(id) { const el=document.getElementById('win-'+id); if(el) el.remove(); renumber(); updateTotals(); }
 function renumber() { document.querySelectorAll('.win-card').forEach((c,i)=>{ const l=c.querySelector('.win-label'); if(l) l.textContent='Window '+(i+1); }); }
 function set(id,val) { const el=document.getElementById(id); if(el&&val!==undefined&&val!==null) el.value=val; }
@@ -633,9 +882,9 @@ function collectData() {
   const wins=[];
   for(let i=1;i<=winCount;i++) {
     if(!document.getElementById('win-'+i)) continue;
-    wins.push({type:g('w'+i+'-type'),config:g('w'+i+'-config'),combounits:g('w'+i+'-combounits'),leg:g('w'+i+'-leg'),width:g('w'+i+'-width'),height:g('w'+i+'-height'),qty:g('w'+i+'-qty'),notes:g('w'+i+'-notes')});
+    wins.push({type:g('w'+i+'-type'),config:g('w'+i+'-config'),combounits:g('w'+i+'-combounits'),leg:g('w'+i+'-leg'),width:getDimValue('w'+i+'-width','w'+i+'-width-custom'),height:getDimValue('w'+i+'-height','w'+i+'-height-custom'),qty:g('w'+i+'-qty'),room:g('w'+i+'-room'),notes:g('w'+i+'-notes'),misccost:g('w'+i+'-misccost'),misclabor:g('w'+i+'-misclabor'),miscdesc:g('w'+i+'-miscdesc'),adder:g('w'+i+'-adder'),adderdesc:g('w'+i+'-adderdesc'),glass:g('w'+i+'-glass'),framecolor:g('w'+i+'-framecolor'),screen:g('w'+i+'-screen'),screenqty:g('w'+i+'-screenqty')});
   }
-  return {jobNum:g('jobNum'),jobDate:g('jobDate'),custName:g('custName'),custPhone:g('custPhone'),custAddr:g('custAddr'),markup:g('markup'),taxRate:g('taxRate'),labor:g('labor'),sgdLabor:g('sgdLabor'),fdLabor:g('fdLabor'),tolerance:g('tolerance'),permitCost:g('permitCost'),miscCost:g('miscCost'),windows:wins,savedAt:new Date().toLocaleString()};
+  return {jobNum:g('jobNum'),jobDate:g('jobDate'),custName:g('custName'),custPhone:g('custPhone'),custAddr:g('custAddr'),jobNotes:g('jobNotes'),installDate:g('installDate'),installDays:g('installDays'),markup:g('markup'),taxRate:g('taxRate'),labor:g('labor'),sgdLabor:g('sgdLabor'),fdLabor:g('fdLabor'),tolerance:g('tolerance'),permitCost:g('permitCost'),miscCost:g('miscCost'),screenCost:g('screenCost'),windows:wins,savedAt:new Date().toLocaleString()};
 }
 
 function saveJob() { const d=collectData(); localStorage.setItem('est_'+(d.jobNum||Date.now()),JSON.stringify(d)); showToast('Estimate saved!'); }
@@ -659,11 +908,15 @@ function loadJob(key) {
   const data=JSON.parse(raw);
   resetForm();
   set('jobNum',data.jobNum); set('jobDate',data.jobDate); set('custName',data.custName); set('custPhone',data.custPhone); set('custAddr',data.custAddr);
+  if(data.jobNotes) set('jobNotes',data.jobNotes);
+  if(data.installDate) set('installDate',data.installDate);
+  if(data.installDays) set('installDays',data.installDays);
   if(data.markup) set('markup',data.markup); if(data.taxRate) set('taxRate',data.taxRate);
   if(data.labor) set('labor',data.labor); if(data.sgdLabor) set('sgdLabor',data.sgdLabor);
   if(data.tolerance) set('tolerance',data.tolerance);
   if(data.permitCost!==undefined) set('permitCost',data.permitCost);
   if(data.miscCost!==undefined) set('miscCost',data.miscCost);
+  if(data.screenCost!==undefined) set('screenCost',data.screenCost);
   (data.windows||[]).forEach(w=>addWindow(w));
   closeOverlay(); showToast('Estimate loaded!'); window.scrollTo({top:0,behavior:'smooth'});
 }
@@ -674,10 +927,32 @@ function closeOverlay() { document.getElementById('overlay').classList.remove('s
 function clearAll() { if(!confirm('Clear everything and start a new estimate?')) return; resetForm(); showToast('Ready for new estimate'); }
 
 function resetForm() {
-  ['jobNum','jobDate','custName','custPhone','custAddr'].forEach(id=>set(id,''));
+  ['jobNum','jobDate','custName','custPhone','custAddr','jobNotes','installDate','installDays'].forEach(id=>set(id,''));
   document.getElementById('windowList').innerHTML='';
   winCount=0;
-  document.getElementById('jobDate').valueAsDate=new Date();
+  
+function checkPin() {
+  const pin = document.getElementById('pinInput').value.trim();
+  if (pin === '777') {
+    document.getElementById('lockScreen').style.display = 'none';
+    document.getElementById('appContent').style.display = 'block';
+    sessionStorage.setItem('estimator_unlocked','1');
+  } else {
+    const err = document.getElementById('pinError');
+    err.textContent = 'Incorrect PIN — try again';
+    document.getElementById('pinInput').value = '';
+    document.getElementById('pinInput').focus();
+    setTimeout(() => { err.textContent = ''; }, 2500);
+  }
+}
+
+// Check if already unlocked this session
+if (sessionStorage.getItem('estimator_unlocked') === '1') {
+  document.getElementById('lockScreen').style.display = 'none';
+  document.getElementById('appContent').style.display = 'block';
+}
+
+document.getElementById('jobDate').valueAsDate=new Date();
   updateTotals();
   addWindow();
 }
@@ -685,12 +960,12 @@ function resetForm() {
 function generateOutput() {
   const data=collectData();
   let out='=== Window Estimate ===\n';
-  out+=`Job #:    ${data.jobNum||'—'}\nDate:     ${data.jobDate||'—'}\nCustomer: ${data.custName||'—'}\nPhone:    ${data.custPhone||'—'}\nAddress:  ${data.custAddr||'—'}\n\n--- Windows ---\n`;
+  out+=`Job #:    ${data.jobNum||'—'}\nDate:     ${data.jobDate||'—'}\nCustomer: ${data.custName||'—'}\nPhone:    ${data.custPhone||'—'}\nAddress:  ${data.custAddr||'—'}\n${data.jobNotes?'Notes:    '+data.jobNotes+'\n':''}\n--- Windows ---\n`;
   (data.windows||[]).forEach((w,i)=>{
     const match=findPrice(w.type,parseFloat(w.width)||0,parseFloat(w.height)||0,w.config);
     const qty=parseInt(w.qty)||1;
     out+=`\nWindow ${i+1}: ${typeLabels[w.type]||w.type}${w.config?' — '+w.config:''}\n`;
-    out+=`  Size: ${w.width}" W x ${w.height}" H  Qty: ${qty}\n`;
+    out+=`  Size: ${w.width}" W x ${w.height}" H  Qty: ${qty}  Glass: ${w.glass||'Clear'}  Frame: ${w.framecolor||'White'}${w.screen?' Screen: '+w.screen:''}\n`;
     if(w.notes) out+=`  Notes: ${w.notes}\n`;
     if(match) {
       const p=calcWindowPrice(match.cost);
@@ -720,13 +995,522 @@ function emailJob() {
 
 function showToast(msg) { const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2500); }
 
-['markup','taxRate','labor','sgdLabor','fdLabor','tolerance','permitCost','miscCost'].forEach(id=>{
+['markup','taxRate','labor','sgdLabor','fdLabor','tolerance','permitCost','miscCost','screenCost'].forEach(id=>{
   const el = document.getElementById(id);
   if(el) el.addEventListener('input',()=>{ for(let i=1;i<=winCount;i++){if(document.getElementById('win-'+i)) updatePrice(i);} });
 });
 
+
+function checkPin() {
+  const pin = document.getElementById('pinInput').value.trim();
+  if (pin === '777') {
+    document.getElementById('lockScreen').style.display = 'none';
+    document.getElementById('appContent').style.display = 'block';
+    sessionStorage.setItem('estimator_unlocked','1');
+  } else {
+    const err = document.getElementById('pinError');
+    err.textContent = 'Incorrect PIN — try again';
+    document.getElementById('pinInput').value = '';
+    document.getElementById('pinInput').focus();
+    setTimeout(() => { err.textContent = ''; }, 2500);
+  }
+}
+
+// Check if already unlocked this session
+if (sessionStorage.getItem('estimator_unlocked') === '1') {
+  document.getElementById('lockScreen').style.display = 'none';
+  document.getElementById('appContent').style.display = 'block';
+}
+
 document.getElementById('jobDate').valueAsDate=new Date();
 addWindow();
+
+function handleDimChange(selId, customId) {
+  const sel = document.getElementById(selId);
+  const custom = document.getElementById(customId);
+  if (!sel || !custom) return;
+  if (sel.value === 'custom') {
+    custom.style.display = 'block';
+    custom.focus();
+  } else {
+    custom.style.display = 'none';
+  }
+}
+
+function syncCustom(customId, selId) {
+  // When typing custom value, keep select showing custom
+  const sel = document.getElementById(selId);
+  if (sel) sel.value = 'custom';
+}
+
+function getDimValue(selId, customId) {
+  const sel = document.getElementById(selId);
+  const custom = document.getElementById(customId);
+  if (!sel) return 0;
+  if (sel.value === 'custom') return parseFloat(custom ? custom.value : 0) || 0;
+  return parseFloat(sel.value) || 0;
+}
+
+
+
+// ============================================================
+// SVG WINDOW RENDERINGS
+// ============================================================
+function getSVG(type, cfg) {
+  const W = 120, H = 100;
+  const s = (inner) => `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${inner}</svg>`;
+  const frame = (x,y,w,h) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="none" stroke="#1a3a6c" stroke-width="3" rx="1"/>`;
+  const line = (x1,y1,x2,y2) => `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#1a3a6c" stroke-width="1.5"/>`;
+  const arrow = (x,y,dir) => dir==='right' ? `<path d="M${x},${y} L${x+10},${y} M${x+6},${y-4} L${x+10},${y} L${x+6},${y+4}" stroke="#1a6fc4" stroke-width="1.5" fill="none"/>` : `<path d="M${x},${y} L${x},${y+10} M${x-4},${y+6} L${x},${y+10} L${x+4},${y+6}" stroke="#1a6fc4" stroke-width="1.5" fill="none"/>`;
+
+  if (type==='SH5500'||type==='DH5560') {
+    // Single/Double hung - frame with center horizontal line
+    return s(frame(10,8,100,84) + line(10,50,110,50) + arrow(54,60,'down') +
+      `<text x="60" y="28" font-size="9" fill="#666" text-anchor="middle">FIXED</text>` +
+      `<text x="60" y="72" font-size="9" fill="#1a6fc4" text-anchor="middle">OPERABLE</text>`);
+  }
+  if (type==='HR5510') {
+    const isXOX = cfg==='XOX';
+    if (isXOX) {
+      return s(frame(5,8,110,84) + line(42,8,42,92) + line(78,8,78,92) +
+        `<text x="24" y="55" font-size="8" fill="#1a6fc4" text-anchor="middle">OPR</text>` +
+        `<text x="60" y="55" font-size="8" fill="#666" text-anchor="middle">FXD</text>` +
+        `<text x="92" y="55" font-size="8" fill="#1a6fc4" text-anchor="middle">OPR</text>` +
+        arrow(14,50,'right'));
+    }
+    return s(frame(5,8,110,84) + line(60,8,60,92) +
+      `<text x="32" y="55" font-size="9" fill="#1a6fc4" text-anchor="middle">OPR</text>` +
+      `<text x="88" y="55" font-size="9" fill="#666" text-anchor="middle">FXD</text>` +
+      arrow(18,50,'right'));
+  }
+  if (type==='PW5520'||type==='AR5520') {
+    return s(frame(10,8,100,84) +
+      line(10,8,110,92) + line(110,8,10,92) +
+      `<text x="60" y="55" font-size="9" fill="#666" text-anchor="middle">FIXED</text>`);
+  }
+  if (type==='AR5520_HC') {
+    return s(`<path d="M10,92 L10,55 A50,47 0 0,1 110,55 L110,92 Z" fill="none" stroke="#1a3a6c" stroke-width="3"/>` +
+      line(10,92,110,92) +
+      `<text x="60" y="80" font-size="9" fill="#666" text-anchor="middle">HALF CIRCLE</text>`);
+  }
+  if (type==='AR5520_EB') {
+    return s(`<path d="M10,92 L10,65 Q60,10 110,65 L110,92 Z" fill="none" stroke="#1a3a6c" stroke-width="3"/>` +
+      line(10,92,110,92) +
+      `<text x="60" y="82" font-size="9" fill="#666" text-anchor="middle">EYEBROW</text>`);
+  }
+  if (type==='FD5555') {
+    if (cfg==='XX') {
+      return s(frame(5,8,110,84) + line(60,8,60,92) +
+        `<circle cx="52" cy="50" r="3" fill="#1a3a6c"/>` +
+        `<circle cx="68" cy="50" r="3" fill="#1a3a6c"/>` +
+        `<text x="60" y="90" font-size="8" fill="#666" text-anchor="middle">DOUBLE DOOR</text>`);
+    }
+    return s(frame(10,8,100,84) +
+      `<circle cx="35" cy="50" r="4" fill="#1a3a6c"/>` +
+      `<path d="M39,50 Q70,30 70,50" fill="none" stroke="#1a3a6c" stroke-width="1.5" stroke-dasharray="4,2"/>` +
+      `<text x="60" y="90" font-size="8" fill="#666" text-anchor="middle">SINGLE DOOR</text>`);
+  }
+  if (type==='SGD770NS'||type==='SGD5570NS'||type==='SGD5570') {
+    const panels = cfg==='XXX'?3:cfg==='OXXO'?4:2;
+    const pw = 110/panels;
+    let inner = frame(5,8,110,84);
+    for(let i=1;i<panels;i++) inner += line(5+pw*i,8,5+pw*i,92);
+    // Arrow on first operable panel
+    inner += arrow(5+pw*0.3, 45, 'right');
+    if(cfg==='OXXO') {
+      inner += `<text x="${5+pw*0.5}" y="75" font-size="7" fill="#666" text-anchor="middle">FXD</text>`;
+      inner += `<text x="${5+pw*3.5}" y="75" font-size="7" fill="#666" text-anchor="middle">FXD</text>`;
+    }
+    inner += `<text x="60" y="95" font-size="7" fill="#666" text-anchor="middle">${cfg||'XX'} SLIDING DOOR</text>`;
+    return s(inner);
+  }
+  if (type==='COMBO_SH5500') {
+    return s(frame(5,8,50,84) + frame(65,8,50,84) +
+      line(5,50,55,50) + line(65,50,115,50) +
+      `<rect x="55" y="8" width="10" height="84" fill="#ddd" stroke="#999" stroke-width="1"/>` +
+      `<text x="60" y="97" font-size="7" fill="#666" text-anchor="middle">COMBO UNIT</text>`);
+  }
+  if (type==='MULLBAR') {
+    return s(`<rect x="52" y="5" width="16" height="90" fill="#ccc" stroke="#1a3a6c" stroke-width="2" rx="2"/>` +
+      `<text x="60" y="102" font-size="8" fill="#666" text-anchor="middle">MULL BAR</text>`);
+  }
+  // MISC / default
+  return s(`<rect x="10" y="8" width="100" height="84" fill="none" stroke="#999" stroke-width="2" stroke-dasharray="6,3" rx="4"/>` +
+    `<text x="60" y="55" font-size="11" fill="#999" text-anchor="middle">CUSTOM</text>`);
+}
+
+// Type descriptions
+const typeDescriptions = {
+  'SH5500': 'PGT Single Hung · Miami-Dade Certified · Vinyl Frame · Hurricane Laminated Insulating Glass · Clear (green exterior hue) · Energy Shield MAX Low-E · Argon Gas · No Grid · BetterVue Screen · Sweep Latch · DP50/50 · SHGC ≤0.25 · UF ≤0.65',
+  'DH5560': 'PGT Double Hung · Miami-Dade Certified · Vinyl Frame · Hurricane Laminated Insulating Glass · Clear · Energy Shield MAX Low-E · Argon Gas · No Grid · DP50/50 · SHGC ≤0.25 · UF ≤0.65',
+  'HR5510': 'PGT Horizontal Roller · Miami-Dade Certified · Vinyl Frame · Hurricane Laminated Insulating Glass · Clear (green exterior hue) · Energy Shield MAX Low-E · Argon Gas · No Grid · BetterVue Screen · Sweep Latch · DP50/50 · SHGC ≤0.25 · UF ≤0.65',
+  'PW5520': 'PGT Picture Window · Miami-Dade Certified · Vinyl Frame · Hurricane Laminated Insulating Glass · Clear (green exterior hue) · Energy Shield MAX Low-E · Argon Gas · No Grid · Fixed · DP50/50 · SHGC ≤0.25 · UF ≤0.65',
+  'AR5520': 'PGT Architectural Window · Miami-Dade Certified · Vinyl Frame · Hurricane Laminated Insulating Glass · Clear · Energy Shield MAX Low-E · Argon Gas · No Grid · Fixed · DP50/50',
+  'AR5520_HC': 'PGT Half Circle Architectural · Miami-Dade Certified · Vinyl Frame · Hurricane Laminated Insulating Glass · Clear · Energy Shield MAX Low-E · Argon Gas · No Grid · Fixed · DP50/50',
+  'AR5520_EB': 'PGT Eyebrow Architectural · Miami-Dade Certified · Vinyl Frame · Hurricane Laminated Insulating Glass · Clear · Energy Shield MAX Low-E · Argon Gas · No Grid · Fixed · DP50/50',
+  'FD5555': 'PGT French Door Series 5555 · Miami-Dade Certified · Vinyl Frame · Outswing · Hurricane Laminated Insulating Glass · Clear (green exterior hue) · Energy Shield MAX Low-E · Argon Gas · No Grid · Multi-Point Satin Handle · DP60/60 · SHGC ≤0.25 · UF ≤0.65',
+  'SGD770NS': 'PGT Sliding Glass Door 770NS · Miami-Dade Certified · Aluminum Frame · Bypass · Hurricane Laminated Insulating Glass · Clear (green exterior hue) · Energy Shield MAX Low-E · Argon Gas · No Grid · Stainless Steel Rollers · 3.25" Sill Riser · DP60/60 · SHGC ≤0.25 · UF ≤0.65',
+  'SGD5570NS': 'PGT Sliding Glass Door 5570NS · Miami-Dade Certified · Aluminum Frame · Hurricane Laminated Insulating Glass · Clear · Energy Shield MAX Low-E · Argon Gas · Stainless Steel Rollers · DP60/60',
+  'SGD5570': 'PGT Sliding Glass Door 5570 · Miami-Dade Certified · Aluminum Frame · Hurricane Laminated Insulating Glass · Clear · Energy Shield MAX Low-E · Argon Gas · DP60/60',
+  'COMBO_SH5500': 'PGT Multi-Unit Single Hung Combination · Miami-Dade Certified · Vinyl Frame · Hurricane Laminated Insulating Glass · Clear · Energy Shield MAX Low-E · Argon Gas · Mulled Units with Structural Mull Bar · DP50/50',
+  'MULLBAR': 'PGT Structural Mull Bar · Series 5500 · Miami-Dade Certified · Joins adjacent window units in a single opening',
+  'MISC': 'Custom / Specialty Unit · PGT Miami-Dade Certified Impact Product'
+};
+
+// ============================================================
+// REPORT GENERATOR
+// ============================================================
+function openReport(mode) {
+  const data = collectData();
+  const markup = parseFloat(data.markup)/100||0.3577;
+  const tax = parseFloat(data.taxRate)/100||0.07;
+  const permit = parseFloat(data.permitCost)||0;
+  const misc = parseFloat(data.miscCost)||0;
+  const screenCostSetting = parseFloat(data.screenCost)||350;
+
+  // Recalculate all line totals
+  let windowsSub=0, taxSub=0, laborSub=0;
+  const lineItems = [];
+
+  (data.windows||[]).forEach((w,i) => {
+    const width = parseFloat(w.width)||0;
+    const height = parseFloat(w.height)||0;
+    const qty = parseInt(w.qty)||1;
+    const cfg = w.config||'';
+    const type = w.type;
+    let pgtCost=0, lineMarkup=0, lineTax=0, lineLabor=0, lineScreen=0, lineAdder=parseFloat(w.adder)||0;
+    let matchNote='', matched=false;
+
+    if (type==='MISC') {
+      pgtCost = (parseFloat(w.misccost)||0)*qty;
+      lineMarkup = pgtCost*markup;
+      lineTax = (pgtCost+lineMarkup)*tax;
+      lineLabor = (parseFloat(w.misclabor)||0)*qty;
+      matched = pgtCost>0;
+    } else if (COMBO_TYPES.includes(type)) {
+      const baseType = type.replace('COMBO_','');
+      const units = parseInt(w.combounits)||2;
+      const unitWidth = width/units;
+      const unitMatch = findPrice(baseType,unitWidth,height,null);
+      const mullMatch = findPrice('MULL',0,height,null);
+      if (unitMatch) {
+        const mullCost = mullMatch?mullMatch.cost:91.30;
+        const totalPGT = (unitMatch.cost*units)+(mullCost*(units-1));
+        pgtCost = totalPGT;
+        lineMarkup = pgtCost*markup;
+        lineTax = (pgtCost+lineMarkup)*tax;
+        lineLabor = (parseFloat(data.labor)||487)*units*qty;
+        matched=true; matchNote=`${units} units @ ${unitMatch.matchW}"×${unitMatch.matchH}"`;
+      }
+    } else if (MULL_TYPES.includes(type)) {
+      const mullMatch = findPrice('MULL',0,height,null);
+      if (mullMatch) {
+        pgtCost = mullMatch.cost*qty;
+        lineMarkup = pgtCost*markup;
+        lineTax = (pgtCost+lineMarkup)*tax;
+        matched=true;
+      }
+    } else if (AR_TYPES.includes(type)) {
+      const leg = parseFloat(w.leg)||0;
+      const arMatch = findARPrice(type,width,height,leg);
+      if (arMatch) {
+        pgtCost = arMatch.cost*qty;
+        lineMarkup = pgtCost*markup;
+        lineTax = (pgtCost+lineMarkup)*tax;
+        lineLabor = (parseFloat(data.labor)||487)*qty;
+        matched=true;
+      }
+    } else {
+      const match = findPrice(type,width,height,cfg);
+      if (match) {
+        pgtCost = match.cost*qty;
+        lineMarkup = pgtCost*markup;
+        lineTax = (pgtCost+lineMarkup)*tax;
+        lineLabor = getLaborCost(type,cfg,qty);
+        matched=true; matchNote=`${match.matchW}"×${match.matchH}"`;
+        // Screen
+        if (w.screen==='Box Screen') {
+          const scrQty=parseInt(w.screenqty)||1;
+          const sp = calcWindowPrice(screenCostSetting*scrQty);
+          lineScreen = sp.withMarkup + sp.tax;
+        }
+      }
+    }
+
+    const lineTotal = lineMarkup + pgtCost + lineTax + lineLabor + lineScreen + lineAdder;
+    windowsSub += pgtCost+lineMarkup;
+    taxSub += lineTax;
+    laborSub += lineLabor+lineScreen+lineAdder;
+
+    lineItems.push({...w, idx:i+1, pgtCost, lineMarkup, lineTax, lineLabor, lineScreen, lineAdder, lineTotal, matched, matchNote, qty});
+  });
+
+  const grandTotal = windowsSub+taxSub+laborSub+permit+misc;
+  const deposit = grandTotal*0.5;
+  const balance = grandTotal*0.5;
+  const ccFee = grandTotal*0.03;
+
+  // Build HTML
+  const isDealer = mode==='dealer';
+  const companyHTML = `
+    <div class="co-header">
+      <div class="co-name">Mullet's Aluminum</div>
+      <div class="co-contact">6345 McIntosh Road, Sarasota, FL 34238</div>
+      <div class="co-contact">941-371-3502 &nbsp;·&nbsp; Keith@mulletsaluminum.com</div>
+    </div>`;
+
+  const winRows = lineItems.map(w => {
+    if (!w.matched && w.type!=='MISC') return '';
+    const svg = getSVG(w.type, w.config);
+    const desc = typeDescriptions[w.type]||w.type;
+    const glassInfo = [w.glass||'Clear', w.framecolor||'White', w.screen&&w.screen!=='No Screen'?w.screen:''].filter(Boolean).join(' · ');
+
+    const customerCols = `<td class="price-cell">${fmt(w.lineTotal)}</td>`;
+    const dealerCols = `
+      <td class="price-cell">${fmt(w.pgtCost)}</td>
+      <td class="price-cell">${fmt(w.pgtCost+w.lineMarkup)}</td>
+      <td class="price-cell">${fmt(w.lineTax)}</td>
+      <td class="price-cell">${fmt(w.lineLabor)}</td>
+      ${w.lineScreen?`<td class="price-cell">${fmt(w.lineScreen)}</td>`:'<td></td>'}
+      ${w.lineAdder?`<td class="price-cell">${fmt(w.lineAdder)}<br><small>${w.adderdesc||''}</small></td>`:'<td></td>'}
+      <td class="price-cell total-cell">${fmt(w.lineTotal)}</td>`;
+
+    const sizeInfo = isDealer ? `<div class="win-size">${w.width}" W × ${w.height}" H${w.leg?' · Leg: '+w.leg+'"':''} &nbsp;·&nbsp; Qty: ${w.qty}</div>` : `<div class="win-size">Qty: ${w.qty}</div>`;
+
+    return `<tr>
+      <td class="win-num">${w.idx}</td>
+      <td class="win-svg">${svg}</td>
+      <td class="win-info">
+        <div class="win-type">${typeLabels[w.type]||w.type}${w.config?' — '+w.config:''}</div>
+        <div class="win-desc">${desc}</div>
+        ${sizeInfo}
+        <div class="win-meta">${w.room||''}${glassInfo?' · '+glassInfo:''}</div>
+        ${w.notes?`<div class="win-notes">Notes: ${w.notes}</div>`:''}
+        ${w.miscdesc&&w.type==='MISC'?`<div class="win-notes">${w.miscdesc}</div>`:''}
+        ${w.adderdesc&&w.lineAdder&&!isDealer?`<div class="win-notes">+ ${w.adderdesc}</div>`:''}
+      </td>
+      ${isDealer ? dealerCols : customerCols}
+    </tr>`;
+  }).join('');
+
+  const dealerHeader = isDealer ? `<th>PGT Cost</th><th>After Markup</th><th>Tax</th><th>Labor</th><th>Screen</th><th>Add-on</th><th>Line Total</th>` : `<th>Price</th>`;
+
+  const totalsHTML = `
+    <div class="totals-section">
+      <table class="totals-table">
+        ${isDealer?`<tr><td>Windows Subtotal</td><td>${fmt(windowsSub)}</td></tr>`:''}
+        <tr><td>Tax</td><td>${fmt(taxSub)}</td></tr>
+        <tr><td>Labor & Installation</td><td>${fmt(laborSub)}</td></tr>
+        ${permit?`<tr><td>Permit</td><td>${fmt(permit)}</td></tr>`:''}
+        ${misc?`<tr><td>Miscellaneous</td><td>${fmt(misc)}</td></tr>`:''}
+        <tr class="grand-total"><td>TOTAL</td><td>${fmt(grandTotal)}</td></tr>
+        <tr><td>50% Deposit Due</td><td>${fmt(deposit)}</td></tr>
+        <tr><td>Balance Due Upon Completion</td><td>${fmt(balance)}</td></tr>
+        <tr class="cc-row"><td>Credit Card (3% fee)</td><td>${fmt(ccFee)}</td></tr>
+      </table>
+    </div>`;
+
+  const installDateFmt = data.installDate ? new Date(data.installDate+'T12:00:00').toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}) : '_______________';
+  const installDaysVal = data.installDays || '___';
+
+  const boilerplateHTML = !isDealer ? `
+    <div class="boilerplate">
+      <h3>Installation Includes:</h3>
+      <ul>
+        <li>Supply and installation of all hurricane impact windows and doors listed above — PGT 150MPH rated, Miami-Dade certified</li>
+        <li>All work performed by full-time, trained, and insured Mullet's Aluminum craftsmen — <strong>we never use subcontractors</strong></li>
+        <li>Mullet's Aluminum is a fully licensed Commercial/Residential General Contractor <strong>(#CGC1507267)</strong></li>
+        <li>Includes all shop drawings, engineering, permits, insurance, and workers' compensation</li>
+        <li>Removal and complete disposal of all old units and related materials</li>
+        <li>All products are custom-engineered and designed specifically for each opening</li>
+        <li>Replace existing wood bucks at openings with pressure-treated wood reinforcement as necessary</li>
+      </ul>
+      <div class="install-info">
+        <span><strong>Tentative Install Date:</strong> ${installDateFmt}</span>
+        <span><strong>Estimated Install Time:</strong> ${installDaysVal} day(s)</span>
+        <span><strong>Quote Valid For:</strong> 15 days from date above</span>
+      </div>
+      <p class="confidential">&#128274; <strong>Confidentiality Notice:</strong> This proposal is prepared exclusively for your benefit. In good faith, please do not share this proposal or any parts of it with any other party. Thank you.</p>
+      <p class="rendering-note">*Renderings shown on this proposal are for the purposes of referencing operation and style only.</p>
+    </div>` : '';
+
+  const sigHTML = `
+    <div class="sig-section">
+      ${boilerplateHTML}
+      <p class="terms">By signing below, you agree to proceed with this proposal as quoted. All products are special order and non-returnable. A 50% deposit is required to begin work. Balance is due upon completion. A 3% surcharge applies to credit card payments.</p>
+      <div class="sig-row">
+        <div class="sig-line"><div class="sig-label">Authorized Signature</div></div>
+        <div class="sig-line"><div class="sig-label">Date</div></div>
+      </div>
+      <div class="sig-row" style="margin-top:2rem">
+        <div class="sig-line"><div class="sig-label">Deposit Amount</div></div>
+        <div class="sig-line"><div class="sig-label">Balance Due</div></div>
+      </div>
+    </div>`;
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${isDealer?'Dealer Report':'Customer Proposal'} — ${data.custName||'Estimate'}</title>
+<style>
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size:13px; color:#1a1a1a; background:#fff; }
+  .page { max-width:900px; margin:0 auto; padding:2rem; }
+  .co-header { text-align:center; border-bottom:3px solid #1a3a6c; padding-bottom:1rem; margin-bottom:1.5rem; }
+  .co-name { font-size:1.8rem; font-weight:700; color:#1a3a6c; }
+  .co-contact { font-size:0.85rem; color:#555; margin-top:3px; }
+  .report-title { font-size:1rem; font-weight:600; color:${isDealer?'#8a3a00':'#1a3a6c'}; text-align:center; margin-bottom:1.5rem; text-transform:uppercase; letter-spacing:0.1em; }
+  .job-info { display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1.5rem; padding:1rem; background:#f5f7fa; border-radius:8px; }
+  .job-field label { font-size:0.72rem; font-weight:700; text-transform:uppercase; color:#888; display:block; margin-bottom:2px; }
+  .job-field span { font-size:0.95rem; font-weight:500; }
+  .job-notes { grid-column:span 2; }
+  table.win-table { width:100%; border-collapse:collapse; margin-bottom:1.5rem; }
+  table.win-table th { background:#1a3a6c; color:#fff; padding:8px 6px; font-size:0.75rem; text-align:left; }
+  table.win-table td { padding:10px 6px; border-bottom:1px solid #e0e0e0; vertical-align:top; }
+  table.win-table tr:last-child td { border-bottom:none; }
+  .win-num { font-weight:700; color:#1a3a6c; font-size:1rem; width:28px; }
+  .win-svg { width:90px; padding:4px; }
+  .win-svg svg { display:block; }
+  .win-type { font-weight:700; font-size:0.9rem; color:#1a3a6c; }
+  .win-desc { font-size:0.75rem; color:#555; margin:3px 0; line-height:1.4; }
+  .win-size { font-size:0.8rem; font-weight:600; margin:2px 0; }
+  .win-meta { font-size:0.78rem; color:#777; }
+  .win-notes { font-size:0.75rem; color:#888; font-style:italic; margin-top:2px; }
+  .price-cell { text-align:right; font-size:0.85rem; white-space:nowrap; }
+  .total-cell { font-weight:700; color:#1a6fc4; }
+  .totals-section { display:flex; justify-content:flex-end; margin-bottom:2rem; }
+  table.totals-table { min-width:280px; border-collapse:collapse; }
+  table.totals-table td { padding:5px 10px; font-size:0.9rem; border-bottom:1px solid #e0e0e0; }
+  table.totals-table td:last-child { text-align:right; font-weight:600; }
+  .grand-total td { font-size:1.1rem; font-weight:700; color:#1a6fc4; border-top:2px solid #1a3a6c; border-bottom:2px solid #1a3a6c; }
+  .cc-row td { font-size:0.8rem; color:#888; border-bottom:none; }
+  .sig-section { margin-top:2rem; border-top:1px solid #ccc; padding-top:1.5rem; }
+  .terms { font-size:0.75rem; color:#666; line-height:1.5; margin-bottom:1.5rem; }
+  .sig-row { display:grid; grid-template-columns:1fr 1fr; gap:2rem; }
+  .sig-line { border-bottom:1.5px solid #333; padding-bottom:2px; margin-top:2rem; }
+  .sig-label { font-size:0.72rem; color:#888; margin-top:4px; }
+  .print-btn { position:fixed; bottom:1.5rem; right:1.5rem; background:#1a3a6c; color:#fff; border:none; padding:14px 24px; border-radius:999px; font-size:1rem; font-weight:700; cursor:pointer; box-shadow:0 4px 12px rgba(0,0,0,0.3); }
+  .boilerplate { background:#f5f7fa; border-radius:8px; padding:1.25rem; margin-bottom:1.5rem; border-left:4px solid #1a3a6c; }
+  .boilerplate h3 { font-size:0.85rem; font-weight:700; color:#1a3a6c; margin-bottom:0.75rem; text-transform:uppercase; letter-spacing:0.05em; }
+  .boilerplate ul { padding-left:1.25rem; margin-bottom:1rem; }
+  .boilerplate li { font-size:0.8rem; color:#333; margin-bottom:5px; line-height:1.4; }
+  .install-info { display:flex; gap:2rem; flex-wrap:wrap; font-size:0.82rem; margin:0.75rem 0; padding:0.75rem; background:#fff; border-radius:6px; border:1px solid #ddd; }
+  .confidential { font-size:0.78rem; color:#555; margin-top:0.75rem; padding:0.5rem; background:#fffde8; border-radius:4px; }
+  .rendering-note { font-size:0.72rem; color:#999; margin-top:0.5rem; font-style:italic; }
+  @media print { .print-btn { display:none; } body { font-size:11px; } .page { padding:1rem; } }
+</style>
+</head>
+<body>
+<div class="page">
+  ${companyHTML}
+  <div class="report-title">${isDealer?'Dealer Cost Report':'Installation Proposal'}</div>
+  <div class="job-info">
+    <div class="job-field"><label>Customer</label><span>${data.custName||'—'}</span></div>
+    <div class="job-field"><label>Date</label><span>${data.jobDate||new Date().toLocaleDateString()}</span></div>
+    <div class="job-field"><label>Phone</label><span>${data.custPhone||'—'}</span></div>
+    <div class="job-field"><label>Job #</label><span>${data.jobNum||'—'}</span></div>
+    <div class="job-field job-notes"><label>Address</label><span>${data.custAddr||'—'}</span></div>
+    ${data.jobNotes?`<div class="job-field job-notes"><label>Scope of Work</label><span>${data.jobNotes}</span></div>`:''}
+  </div>
+  <table class="win-table">
+    <thead><tr><th>#</th><th>Window</th><th>Description</th>${dealerHeader}</tr></thead>
+    <tbody>${winRows}</tbody>
+  </table>
+  ${totalsHTML}
+  ${sigHTML}
+</div>
+<button class="print-btn" onclick="window.print()">🖨 Print / Save PDF</button>
+</body>
+</html>`;
+
+  const win = window.open('','_blank');
+  win.document.write(html);
+  win.document.close();
+}
+
+// VOICE MEASUREMENT
+let activeRecognition = null;
+let activeMicBtn = null;
+
+function parseMeasurement(transcript) {
+  transcript = transcript.toLowerCase().trim();
+  const fractions = {
+    'one eighth':0.125,'one-eighth':0.125,'1/8':0.125,
+    'one quarter':0.25,'one-quarter':0.25,'1/4':0.25,'a quarter':0.25,
+    '3/8':0.375,'three eighths':0.375,'three-eighths':0.375,
+    'a half':0.5,'one half':0.5,'half':0.5,'1/2':0.5,
+    '5/8':0.625,'five eighths':0.625,
+    '3/4':0.75,'three quarters':0.75,'three-quarters':0.75,
+    '7/8':0.875,'seven eighths':0.875
+  };
+  let result = transcript;
+  for (const [word, val] of Object.entries(fractions)) {
+    result = result.replace(new RegExp(word,'g'), ' '+val+' ');
+  }
+  const nums = result.match(/\d+(\.\d+)?/g);
+  if (!nums) return null;
+  if (nums.length === 1) return parseFloat(nums[0]);
+  return parseFloat(nums[0]) + parseFloat(nums[1]);
+}
+
+function startMic(fieldId, winId) {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) { showToast('Microphone not supported on this browser'); return; }
+
+  const btn = document.getElementById(fieldId.replace(/-/g,'').replace('width','micW').replace('height','micH'));
+  // Find btn by searching
+  const allBtns = document.querySelectorAll('.mic-btn');
+  let micBtn = null;
+  allBtns.forEach(b => { if (b.getAttribute('onclick') && b.getAttribute('onclick').includes(fieldId)) micBtn = b; });
+
+  if (activeRecognition) {
+    activeRecognition.stop();
+    activeRecognition = null;
+    if (activeMicBtn) { activeMicBtn.classList.remove('listening'); activeMicBtn.textContent = '🎤'; }
+    activeMicBtn = null;
+    return;
+  }
+
+  const recognition = new SpeechRecognition();
+  recognition.continuous = false;
+  recognition.interimResults = false;
+  recognition.lang = 'en-US';
+
+  activeRecognition = recognition;
+  activeMicBtn = micBtn;
+  if (micBtn) { micBtn.classList.add('listening'); micBtn.textContent = '🔴'; }
+
+  recognition.onresult = (e) => {
+    const transcript = e.results[0][0].transcript;
+    const val = parseMeasurement(transcript);
+    if (val !== null) {
+      const field = document.getElementById(fieldId);
+      if (field) {
+        field.style.display = 'block';
+        field.value = val;
+        // Set the select to custom
+        const selId = fieldId.replace('-custom','');
+        const sel = document.getElementById(selId);
+        if (sel) sel.value = 'custom';
+        updatePrice(winId);
+      }
+      showToast('Got: ' + val + '"');
+    } else {
+      showToast('Could not parse: "' + transcript + '"');
+    }
+  };
+  recognition.onerror = () => { showToast('Mic error — try again'); };
+  recognition.onend = () => {
+    activeRecognition = null;
+    if (activeMicBtn) { activeMicBtn.classList.remove('listening'); activeMicBtn.textContent = '🎤'; }
+    activeMicBtn = null;
+  };
+  recognition.start();
+}
+
 </script>
+</div>
 </body>
 </html>
