@@ -112,11 +112,8 @@
   <div class="row2">
     <div class="field"><label>Tentative Install</label><input type="text" id="installDate" placeholder="e.g. June / July" autocomplete="off"></div>
     <div class="field"><label>Install Days</label>
-      <div style="display:flex;gap:8px">
-        <input type="number" id="installDays" placeholder="e.g. 3" inputmode="numeric" min="1" style="flex:1">
-        <button onclick="calcInstallDays()" style="min-height:var(--tap);padding:0 14px;background:var(--blue-light);color:var(--blue);border:1.5px solid var(--blue);border-radius:10px;font-size:0.85rem;font-weight:600;cursor:pointer;white-space:nowrap">Auto</button>
-      </div>
-      <div class="settings-note">3-4 windows/day · 1 day per door</div>
+      <input type="number" id="installDays" placeholder="auto" inputmode="numeric" min="1">
+      <div class="settings-note">Auto-calculated · override anytime</div>
     </div>
   </div>
   <div class="field"><label>Job Notes / Scope</label><textarea id="jobNotes" placeholder="Scope of work, special instructions, access notes..." rows="3" style="width:100%;font-size:1rem;padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;font-family:inherit;resize:vertical"></textarea></div>
@@ -131,7 +128,7 @@
   <div class="row2">
     <div class="field">
       <label>Window Labor $</label>
-      <input type="number" id="labor" value="487" inputmode="numeric">
+      <input type="number" id="labor" value="497.77" inputmode="numeric">
       <div class="settings-note">Per window</div>
     </div>
     <div class="field">
@@ -441,7 +438,7 @@ function updatePrice(id) {
     const unitWidth = width / units;
     const markup = parseFloat(g('markup'))/100||0.3577;
     const tax = parseFloat(g('taxRate'))/100||0.07;
-    const laborPer = parseFloat(g('labor'))||487;
+    const laborPer = parseFloat(g('labor'))||497.77;
 
     // Find each unit price
     const unitMatch = findPrice(baseType, unitWidth, height, null);
@@ -511,7 +508,7 @@ function updatePrice(id) {
   if (AR_TYPES.includes(type)) {
     const markup = parseFloat(g('markup'))/100||0.3577;
     const tax = parseFloat(g('taxRate'))/100||0.07;
-    const labor = parseFloat(g('labor'))||487;
+    const labor = parseFloat(g('labor'))||497.77;
     const leg = parseFloat(g('w'+id+'-leg'))||0;
     const arMatch = findARPrice(type, width, height, leg);
     if (!arMatch) {
@@ -577,7 +574,7 @@ function updatePrice(id) {
   let laborNote;
   if (isSGD(type)) { laborNote = `${SGD_PANELS[cfg]||2} panels × ${fmt(parseFloat(g('sgdLabor'))||771.77)}`; }
   else if (FD_TYPES.includes(type)) { laborNote = `${qty} door${qty>1?'s':''} × ${fmt(parseFloat(g('fdLabor'))||1200)}`; }
-  else { laborNote = `${qty} window${qty>1?'s':''} × ${fmt(parseFloat(g('labor'))||487)}`; }
+  else { laborNote = `${qty} window${qty>1?'s':''} × ${fmt(parseFloat(g('labor'))||497.77)}`; }
 
   box.innerHTML = `
     <div class="price-row"><span>PGT cost</span><span>${fmt(p.cost)}</span></div>
@@ -623,7 +620,7 @@ function updateTotals() {
       const wm = arMatch.cost*(1+markup);
       windowsTotal += wm*qty;
       taxTotal += wm*tax*qty;
-      laborTotal += (parseFloat(g('labor'))||487)*qty;
+      laborTotal += (parseFloat(g('labor'))||497.77)*qty;
       continue;
     }
     if (MULL_TYPES.includes(type)) {
@@ -647,7 +644,7 @@ function updateTotals() {
       const wm = totalPGT*(1+markup);
       windowsTotal += wm*qty;
       taxTotal += wm*tax*qty;
-      laborTotal += (parseFloat(g('labor'))||487)*units*qty;
+      laborTotal += (parseFloat(g('labor'))||497.77)*units*qty;
       continue;
     }
     const match = findPrice(type,width,height,cfg);
@@ -664,6 +661,7 @@ function updateTotals() {
 
   const permit = parseFloat(g('permitCost'))||0;
   const misc = parseFloat(g('miscCost'))||0;
+  calcInstallDays();
   document.getElementById('totWindows').textContent = fmt(windowsTotal);
   document.getElementById('totTax').textContent = fmt(taxTotal);
   document.getElementById('totLabor').textContent = fmt(laborTotal);
@@ -919,12 +917,20 @@ function closeOverlay() { document.getElementById('overlay').classList.remove('s
 function clearAll() { if(!confirm('Clear everything and start a new estimate?')) return; resetForm(); showToast('Ready for new estimate'); }
 
 function resetForm() {
-  ['jobNum','jobDate','custName','custPhone','custAddr','jobNotes','installDate','installDays'].forEach(id=>set(id,''));
+  ['jobNum','jobDate','custName','custPhone','custAddr','jobNotes','installDays'].forEach(id=>set(id,''));
+  // Keep installDate — it's a forecast that doesn't change per job
   document.getElementById('windowList').innerHTML='';
   winCount=0;
   
 
+document.getElementById('installDays').addEventListener('input', function() {
+  this.dataset.manual = this.value ? '1' : '';
+});
+
 function calcInstallDays() {
+  // Don't override if user manually set it
+  const field = document.getElementById('installDays');
+  if (field && field.dataset.manual === '1') return;
   let windows = 0, doors = 0;
   for (let i=1; i<=winCount; i++) {
     if (!document.getElementById('win-'+i)) continue;
@@ -1017,7 +1023,14 @@ function showToast(msg) { const t=document.getElementById('toast'); t.textConten
 
 
 
+document.getElementById('installDays').addEventListener('input', function() {
+  this.dataset.manual = this.value ? '1' : '';
+});
+
 function calcInstallDays() {
+  // Don't override if user manually set it
+  const field = document.getElementById('installDays');
+  if (field && field.dataset.manual === '1') return;
   let windows = 0, doors = 0;
   for (let i=1; i<=winCount; i++) {
     if (!document.getElementById('win-'+i)) continue;
@@ -1290,7 +1303,7 @@ function openReport(mode) {
     const desc = typeDescriptions[w.type]||w.type;
     const glassInfo = [w.glass||'Clear', w.framecolor||'White', w.screen&&w.screen!=='No Screen'?w.screen:''].filter(Boolean).join(' · ');
 
-    const customerCols = `<td class="price-cell">${fmt(w.lineTotal)}</td>`;
+    const customerCols = `<td class="price-cell line-price-cell">${fmt(w.lineTotal)}</td>`;
     const dealerCols = `
       <td class="price-cell">${fmt(w.pgtCost)}</td>
       <td class="price-cell">${fmt(w.pgtCost+w.lineMarkup)}</td>
@@ -1300,12 +1313,13 @@ function openReport(mode) {
       ${w.lineAdder?`<td class="price-cell">${fmt(w.lineAdder)}<br><small>${w.adderdesc||''}</small></td>`:'<td></td>'}
       <td class="price-cell total-cell">${fmt(w.lineTotal)}</td>`;
 
-    const sizeInfo = isDealer ? `<div class="win-size">${w.width}" W × ${w.height}" H${w.leg?' · Leg: '+w.leg+'"':''} &nbsp;·&nbsp; Qty: ${w.qty}</div>` : `<div class="win-size">Qty: ${w.qty}</div>`;
+    const sizeInfo = isDealer ? `<div class="win-size">${w.width}" W × ${w.height}" H${w.leg?' · Leg: '+w.leg+'"':''}</div>` : '';
 
     return `<tr>
       <td class="win-num">${w.idx}</td>
       <td class="win-svg">${svg}</td>
       <td class="win-info">
+        <div style="font-size:0.78rem;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:3px">Qty: ${w.qty}</div>
         <div class="win-type">${typeLabels[w.type]||w.type}${w.config?' — '+w.config:''}</div>
         <div class="win-desc">${desc}</div>
         ${sizeInfo}
@@ -1318,20 +1332,22 @@ function openReport(mode) {
     </tr>`;
   }).join('');
 
-  const dealerHeader = isDealer ? `<th>PGT Cost</th><th>After Markup</th><th>Tax</th><th>Labor</th><th>Screen</th><th>Add-on</th><th>Line Total</th>` : `<th>Price</th>`;
+  const dealerHeader = isDealer ? `<th>PGT Cost</th><th>After Markup</th><th>Tax</th><th>Labor</th><th>Screen</th><th>Add-on</th><th>Line Total</th>` : `<th class="line-price-header">Price</th>`;
 
   const totalsHTML = `
     <div class="totals-section">
       <table class="totals-table">
-        ${isDealer?`<tr><td>Windows Subtotal</td><td>${fmt(windowsSub)}</td></tr>`:''}
-        <tr><td>Tax</td><td>${fmt(taxSub)}</td></tr>
-        <tr><td>Labor & Installation</td><td>${fmt(laborSub)}</td></tr>
-        ${permit?`<tr><td>Permit</td><td>${fmt(permit)}</td></tr>`:''}
-        ${misc?`<tr><td>Miscellaneous</td><td>${fmt(misc)}</td></tr>`:''}
+        ${isDealer?`
+          <tr><td>Windows Subtotal</td><td>${fmt(windowsSub)}</td></tr>
+          <tr><td>Tax</td><td>${fmt(taxSub)}</td></tr>
+          <tr><td>Labor & Installation</td><td>${fmt(laborSub)}</td></tr>
+          ${permit?`<tr><td>Permit</td><td>${fmt(permit)}</td></tr>`:''}
+          ${misc?`<tr><td>Miscellaneous</td><td>${fmt(misc)}</td></tr>`:''}
+        `:''}
         <tr class="grand-total"><td>TOTAL</td><td>${fmt(grandTotal)}</td></tr>
         <tr><td>50% Deposit Due</td><td>${fmt(deposit)}</td></tr>
         <tr><td>Balance Due Upon Completion</td><td>${fmt(balance)}</td></tr>
-        <tr class="cc-row"><td>Credit Card (3% fee)</td><td>${fmt(ccFee)}</td></tr>
+        <tr class="cc-row"><td>3% Credit Card Fee</td><td>${fmt(ccFee)}</td></tr>
       </table>
     </div>`;
 
@@ -1362,8 +1378,49 @@ function openReport(mode) {
   const sigHTML = `
     <div class="sig-section">
       ${boilerplateHTML}
-      <p class="terms">By signing below, you agree to proceed with this proposal as quoted. All products are special order and non-returnable. A 50% deposit is required to begin work. Balance is due upon completion. A 3% surcharge applies to credit card payments.</p>
-      <div class="sig-row">
+
+      <div class="legal-block">
+        <h3>ACCEPTANCE OF SALES AGREEMENT</h3>
+        <p>Please examine this Sales Agreement closely. Mullet's Aluminum Products, Inc. agrees to furnish and install the materials itemized herein at the prices, terms, quantities, and locations specified in this agreement. The above products are not sized for installation. Dimensions will change. Drawings above are not to scale. Your signature below confirms that you have verified all quantities, specifications and further confirms your understanding that all products in this agreement are special order and are not changeable, cancelable, or returnable upon release of this order to the manufacturer. Any deviation from this agreement must be covered by a subsequent written proposal and acceptance; verbal quotations to the contrary are not binding. A monthly service charge of 1.5% will be added to all Past Due Accounts. All warranties will be those of the manufacturer's printed warranties. Quote expires in 15 days (please call for update). 50% Deposit, Balance upon completion (after county inspection).</p>
+
+        <h4>PLEASE READ:</h4>
+        <ul>
+          <li>WHEN GLASS IS INSULATED WITH CLEAR GLASS AND 70 LOWE, GLASS WILL HAVE A GREEN HUE ONLY VISIBLE FROM EXTERIOR. INTERIOR APPEARS LESS GREEN. GLASS AND LAMINATED GLASS HAVE INHERENT FLAWS THAT MAY CAUSE DISTORTION WHICH IS ALLOWABLE BY AAMA AND MANUFACTURER GUIDELINES. REPLACEMENT IS AT MANUFACTURER'S DISCRETION.</li>
+          <li>If windows show condensation: pgtwindows.com/condensation-guide</li>
+          <li>Turtle tint glass will be used on property facing the beach.</li>
+          <li>Mullet's and I will visit to make precise measurements and confirm all openings for a custom installation.</li>
+          <li>Mullet's installers place protection and drop cloths at the working area to protect your home.</li>
+          <li>Includes removal and disposal of old material.</li>
+          <li>New windows are installed using tap-cons through newly installed pressure treated wood buck strips penetrating 1¼" into concrete/wood. 3-point caulk system: windows sealed with latex sealant; exterior caulked with polyurethane commercial grade caulk.</li>
+          <li>With installation complete, installers will vacuum as necessary and clean windows and sills, removing all debris.</li>
+          <li>Additional trim may need to be added around sliding glass doors based on depth of new track and frame.</li>
+          <li>Includes screens with all windows.</li>
+          <li>Includes replacement of marble sill should we crack an un-cracked sill at time of installation.</li>
+          <li>If necessary, minor stucco damage to be addressed by Mullet's.</li>
+          <li>Temporary condensation may form on glass surfaces when there is a significant temperature differential between interior and exterior environments.</li>
+          <li>If any paint work is necessary it will need to be done by you or others.</li>
+          <li>Wood repair discovered at time of removal will be shown and discussed with you and billed additionally as follows: Labor $65.00/hour, Material cost plus 20%.</li>
+          <li>Structures built prior to 1978 are subject to lead paint test. If lead is discovered, an additional $100.00 per room for isolating possible contamination.</li>
+          <li>Mullet's cannot be responsible for window treatments. As a courtesy we will remove and replace window treatments, but we cannot be held responsible for them. We are not a window treatment company.</li>
+          <li>Alarms: Mullet's will do its best to reattach the alarm system; however, Mullet's is not an alarm company. Old alarm systems don't always align with new windows. Your alarm company should check your system. Mullet's is not responsible for the operation of your alarm system.</li>
+          <li>All windows will be installed by Mullet's own employees with a minimum one-year warranty.</li>
+          <li>In the case there are "add-on" products listed on this quote, the cost is only applicable to this quote. Those add-ons done at a later time will incur additional permit and mobilization cost.</li>
+        </ul>
+
+        <div class="company-footer">
+          <p><strong>Specializing in Quality Workmanship since 1978</strong><br>
+          Aluminum Association of Florida's Award of Excellence Winner</p>
+          <p>MULLET'S Aluminum Products, Inc. · 6345 McIntosh Road · Sarasota, FL 34238<br>
+          Toll Free: 1-877-685-5387 · Tel: (941) 371-3502 · Fax: (941) 378-5676 · Keith@mulletsaluminum.com</p>
+        </div>
+
+        <div class="recovery-fund">
+          <p><strong>FLORIDA HOMEOWNERS CONSTRUCTION RECOVERY FUND</strong></p>
+          <p>Payment, up to a limited amount, may be available from the Florida Homeowners' Construction Recovery Fund if you lose money on a project performed under contract, where the loss results from specific violations of Florida law by a licensed contractor. For information about the Recovery Fund and filing a claim, contact the Florida Construction Industry Licensing Board at: 2601 Blairstone Road, Tallahassee, FL.</p>
+        </div>
+      </div>
+
+      <div class="sig-row" style="margin-top:2rem">
         <div class="sig-line"><div class="sig-label">Authorized Signature</div></div>
         <div class="sig-line"><div class="sig-label">Date</div></div>
       </div>
@@ -1424,6 +1481,16 @@ function openReport(mode) {
   .install-info { display:flex; gap:2rem; flex-wrap:wrap; font-size:0.82rem; margin:0.75rem 0; padding:0.75rem; background:#fff; border-radius:6px; border:1px solid #ddd; }
   .confidential { font-size:0.78rem; color:#555; margin-top:0.75rem; padding:0.5rem; background:#fffde8; border-radius:4px; }
   .rendering-note { font-size:0.72rem; color:#999; margin-top:0.5rem; font-style:italic; }
+  .legal-block { margin-top:1.5rem; border-top:2px solid #1a3a6c; padding-top:1.25rem; }
+  .legal-block h3 { font-size:0.85rem; font-weight:700; color:#1a3a6c; margin-bottom:0.75rem; text-transform:uppercase; letter-spacing:0.05em; }
+  .legal-block h4 { font-size:0.8rem; font-weight:700; color:#333; margin:1rem 0 0.5rem; }
+  .legal-block p { font-size:0.75rem; color:#333; line-height:1.5; margin-bottom:0.5rem; }
+  .legal-block ul { padding-left:1.25rem; margin-bottom:1rem; }
+  .legal-block li { font-size:0.72rem; color:#444; margin-bottom:4px; line-height:1.4; }
+  .company-footer { margin:1.25rem 0; padding:1rem; background:#f5f7fa; border-radius:6px; text-align:center; }
+  .company-footer p { font-size:0.78rem; color:#333; margin-bottom:4px; }
+  .recovery-fund { margin-top:1rem; padding:0.75rem; border:1px solid #ccc; border-radius:6px; }
+  .recovery-fund p { font-size:0.7rem; color:#555; margin-bottom:4px; line-height:1.4; }
   @media print { .print-btn { display:none; } body { font-size:11px; } .page { padding:1rem; } }
 </style>
 </head>
@@ -1431,13 +1498,14 @@ function openReport(mode) {
 <div class="page">
   ${companyHTML}
   <div class="report-title">${isDealer?'Dealer Cost Report':'Installation Proposal'}</div>
+  <div id="toggleWrap" style="text-align:center;margin-bottom:1rem;display:${isDealer?'none':'block'}"><button onclick="toggleLinePrices()" id="toggleBtn" style="padding:8px 20px;background:#1a3a6c;color:#fff;border:none;border-radius:20px;font-size:0.85rem;font-weight:600;cursor:pointer">Hide Line Prices</button></div>
   <div class="job-info">
     <div class="job-field"><label>Customer</label><span>${data.custName||'—'}</span></div>
     <div class="job-field"><label>Date</label><span>${data.jobDate||new Date().toLocaleDateString()}</span></div>
     <div class="job-field"><label>Phone</label><span>${data.custPhone||'—'}</span></div>
     <div class="job-field"><label>Job #</label><span>${data.jobNum||'—'}</span></div>
     <div class="job-field job-notes"><label>Address</label><span>${data.custAddr||'—'}</span></div>
-    ${data.jobNotes?`<div class="job-field job-notes"><label>Scope of Work</label><span>${data.jobNotes}</span></div>`:''}
+    ${data.jobNotes?('<div class="job-field job-notes"><label>Scope of Work</label><span>'+data.jobNotes+'</span></div>'):''}
   </div>
   <table class="win-table">
     <thead><tr><th>#</th><th>Window</th><th>Description</th>${dealerHeader}</tr></thead>
@@ -1447,6 +1515,17 @@ function openReport(mode) {
   ${sigHTML}
 </div>
 <button class="print-btn" onclick="window.print()">🖨 Print / Save PDF</button>
+<scr'+'ipt>
+function toggleLinePrices() {
+  const cells = document.querySelectorAll('.line-price-cell');
+  const header = document.querySelector('.line-price-header');
+  const btn = document.getElementById('toggleBtn');
+  const isHidden = cells[0] && cells[0].style.visibility === 'hidden';
+  cells.forEach(c => c.style.visibility = isHidden ? 'visible' : 'hidden');
+  if (header) header.style.visibility = isHidden ? 'visible' : 'hidden';
+  if (btn) btn.textContent = isHidden ? 'Hide Line Prices' : 'Show Line Prices';
+}
+</scr'+'ipt>
 </body>
 </html>`;
 
