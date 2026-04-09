@@ -373,8 +373,8 @@ function findARPrice(type, width, height, leg) {
 
 function updatePrice(id) {
   const type = g('w'+id+'-type');
-  const width = getDimValue('w'+id+'-width','w'+id+'-width-custom');
-  const height = getDimValue('w'+id+'-height','w'+id+'-height-custom');
+  const width = getDimValue('w'+id+'-width-sel','w'+id+'-width');
+  const height = getDimValue('w'+id+'-height-sel','w'+id+'-height');
   const qty = parseInt(g('w'+id+'-qty')) || 1;
   const cfg = g('w'+id+'-config');
   const box = document.getElementById('w'+id+'-pricebox');
@@ -601,7 +601,7 @@ function updateTotals() {
 
   for (let i=1; i<=winCount; i++) {
     if (!document.getElementById('win-'+i)) continue;
-    const type=g('w'+i+'-type'), width=getDimValue('w'+i+'-width','w'+i+'-width-custom'), height=getDimValue('w'+i+'-height','w'+i+'-height-custom');
+    const type=g('w'+i+'-type'), width=getDimValue('w'+i+'-width-sel','w'+i+'-width'), height=getDimValue('w'+i+'-height-sel','w'+i+'-height');
     const qty=parseInt(g('w'+i+'-qty'))||1, cfg=g('w'+i+'-config');
     if (!type||!width||!height) continue;
     if ((isSGD(type)||FD_TYPES.includes(type))&&!cfg) continue;
@@ -747,28 +747,26 @@ function addWindow(data) {
         <input type="number" id="w${id}-leg" placeholder='e.g. 6"' inputmode="decimal" step="0.25" oninput="updatePrice(${id})">
       </div>
     </div>
-    <div class="row3">
+    <div style="display:grid;grid-template-columns:1fr 1fr 60px;gap:8px">
       <div class="field"><label>Width</label>
+        <select id="w${id}-width-sel" onchange="dimSelChange('w${id}-width-sel','w${id}-width');updatePrice(${id})" style="min-height:44px;font-size:0.95rem;width:100%;margin-bottom:5px">
+          <option value="">-- common --</option>
+          <option value="18.125">18.125"</option><option value="25.5">25.5"</option><option value="36">36"</option><option value="47">47"</option><option value="52.125">52.125"</option><option value="60">60"</option><option value="72">72"</option><option value="73">73"</option><option value="96">96"</option><option value="109">109"</option><option value="110">110"</option><option value="120">120"</option><option value="144">144"</option>
+        </select>
         <div class="mic-row">
-          <select id="w${id}-width" onchange="handleDimChange('w${id}-width','w${id}-width-custom',{});updatePrice(${id})" style="flex:1;min-height:54px;font-size:1.05rem;font-weight:600">
-            <option value="">--</option>
-            <option value="18.125">18.125"</option><option value="25.5">25.5"</option><option value="36">36"</option><option value="47">47"</option><option value="52.125">52.125"</option><option value="60">60"</option><option value="72">72"</option><option value="73">73"</option><option value="96">96"</option><option value="109">109"</option><option value="110">110"</option><option value="120">120"</option><option value="144">144"</option>
-            <option value="custom">Custom</option>
-          </select>
-          <button class="mic-btn" onclick="startMic('w${id}-width-custom',${id})">🎤</button>
+          <input type="number" id="w${id}-width" placeholder='W"' inputmode="decimal" step="0.125" style="flex:1;min-height:50px;font-size:1.1rem;font-weight:700;padding:0 10px;border:2px solid var(--blue);border-radius:10px" oninput="updatePrice(${id})">
+          <button class="mic-btn" onclick="startMic('w${id}-width',${id})">🎤</button>
         </div>
-        <input type="number" id="w${id}-width-custom" placeholder='Custom"' inputmode="decimal" step="0.125" style="display:none;margin-top:6px;width:100%;min-height:var(--tap);font-size:1rem;padding:0 14px;border:1.5px solid var(--border);border-radius:10px" oninput="syncCustom('w${id}-width-custom','w${id}-width');updatePrice(${id})">
       </div>
       <div class="field"><label>Height</label>
+        <select id="w${id}-height-sel" onchange="dimSelChange('w${id}-height-sel','w${id}-height');updatePrice(${id})" style="min-height:44px;font-size:0.95rem;width:100%;margin-bottom:5px">
+          <option value="">-- common --</option>
+          <option value="25">25"</option><option value="37">37"</option><option value="49">49"</option><option value="49.5">49.5"</option><option value="62">62"</option><option value="75">75"</option><option value="79">79"</option><option value="95">95"</option>
+        </select>
         <div class="mic-row">
-          <select id="w${id}-height" onchange="handleDimChange('w${id}-height','w${id}-height-custom',{});updatePrice(${id})" style="flex:1;min-height:54px;font-size:1.05rem;font-weight:600">
-            <option value="">--</option>
-            <option value="25">25"</option><option value="37">37"</option><option value="49">49"</option><option value="49.5">49.5"</option><option value="62">62"</option><option value="75">75"</option><option value="79">79"</option><option value="95">95"</option>
-            <option value="custom">Custom</option>
-          </select>
-          <button class="mic-btn" onclick="startMic('w${id}-height-custom',${id})">🎤</button>
+          <input type="number" id="w${id}-height" placeholder='H"' inputmode="decimal" step="0.125" style="flex:1;min-height:50px;font-size:1.1rem;font-weight:700;padding:0 10px;border:2px solid var(--blue);border-radius:10px" oninput="updatePrice(${id})">
+          <button class="mic-btn" onclick="startMic('w${id}-height',${id})">🎤</button>
         </div>
-        <input type="number" id="w${id}-height-custom" placeholder='Custom"' inputmode="decimal" step="0.125" style="display:none;margin-top:6px;width:100%;min-height:var(--tap);font-size:1rem;padding:0 14px;border:1.5px solid var(--border);border-radius:10px" oninput="syncCustom('w${id}-height-custom','w${id}-height');updatePrice(${id})">
       </div>
       <div class="field"><label>Qty</label><input type="number" id="w${id}-qty" value="1" min="1" inputmode="numeric" onchange="updatePrice(${id})"></div>
     </div>
@@ -823,20 +821,8 @@ function addWindow(data) {
     if (data.combounits) set('w'+id+'-combounits', data.combounits);
     if (data.leg) set('w'+id+'-leg', data.leg);
     if (data.room) set('w'+id+'-room', data.room);
-    if (data.width) {
-      const wSel = document.getElementById('w'+id+'-width');
-      const wCustom = document.getElementById('w'+id+'-width-custom');
-      const wOpts = wSel ? Array.from(wSel.options).map(o=>o.value) : [];
-      if (wOpts.includes(String(data.width))) { set('w'+id+'-width', data.width); }
-      else { if(wSel) wSel.value='custom'; if(wCustom){wCustom.style.display='block';wCustom.value=data.width;} }
-    }
-    if (data.height) {
-      const hSel = document.getElementById('w'+id+'-height');
-      const hCustom = document.getElementById('w'+id+'-height-custom');
-      const hOpts = hSel ? Array.from(hSel.options).map(o=>o.value) : [];
-      if (hOpts.includes(String(data.height))) { set('w'+id+'-height', data.height); }
-      else { if(hSel) hSel.value='custom'; if(hCustom){hCustom.style.display='block';hCustom.value=data.height;} }
-    }
+    if (data.width) { set('w'+id+'-width', data.width); }
+    if (data.height) { set('w'+id+'-height', data.height); }
     if (data.misccost) set('w'+id+'-misccost', data.misccost);
     if (data.misclabor) set('w'+id+'-misclabor', data.misclabor);
     if (data.miscdesc) set('w'+id+'-miscdesc', data.miscdesc);
@@ -871,8 +857,8 @@ function duplicateWin(id) {
   const cfg = g('w'+id+'-config');
   const combounits = g('w'+id+'-combounits');
   const leg = g('w'+id+'-leg');
-  const width = getDimValue('w'+id+'-width','w'+id+'-width-custom');
-  const height = getDimValue('w'+id+'-height','w'+id+'-height-custom');
+  const width = getDimValue('w'+id+'-width-sel','w'+id+'-width');
+  const height = getDimValue('w'+id+'-height-sel','w'+id+'-height');
   const qty = g('w'+id+'-qty');
   const room = g('w'+id+'-room');
   const notes = g('w'+id+'-notes');
@@ -888,7 +874,7 @@ function collectData() {
   const wins=[];
   for(let i=1;i<=winCount;i++) {
     if(!document.getElementById('win-'+i)) continue;
-    wins.push({type:g('w'+i+'-type'),config:g('w'+i+'-config'),combounits:g('w'+i+'-combounits'),leg:g('w'+i+'-leg'),width:getDimValue('w'+i+'-width','w'+i+'-width-custom'),height:getDimValue('w'+i+'-height','w'+i+'-height-custom'),qty:g('w'+i+'-qty'),room:g('w'+i+'-room'),notes:g('w'+i+'-notes'),misccost:g('w'+i+'-misccost'),misclabor:g('w'+i+'-misclabor'),miscdesc:g('w'+i+'-miscdesc'),adder:g('w'+i+'-adder'),adderdesc:g('w'+i+'-adderdesc'),glass:g('w'+i+'-glass'),framecolor:g('w'+i+'-framecolor'),screen:g('w'+i+'-screen'),screenqty:g('w'+i+'-screenqty')});
+    wins.push({type:g('w'+i+'-type'),config:g('w'+i+'-config'),combounits:g('w'+i+'-combounits'),leg:g('w'+i+'-leg'),width:getDimValue('w'+i+'-width-sel','w'+i+'-width'),height:getDimValue('w'+i+'-height-sel','w'+i+'-height'),qty:g('w'+i+'-qty'),room:g('w'+i+'-room'),notes:g('w'+i+'-notes'),misccost:g('w'+i+'-misccost'),misclabor:g('w'+i+'-misclabor'),miscdesc:g('w'+i+'-miscdesc'),adder:g('w'+i+'-adder'),adderdesc:g('w'+i+'-adderdesc'),glass:g('w'+i+'-glass'),framecolor:g('w'+i+'-framecolor'),screen:g('w'+i+'-screen'),screenqty:g('w'+i+'-screenqty')});
   }
   return {jobNum:g('jobNum'),jobDate:g('jobDate'),custName:g('custName'),custPhone:g('custPhone'),custAddr:g('custAddr'),jobNotes:g('jobNotes'),installDate:g('installDate'),installDays:g('installDays'),markup:g('markup'),taxRate:g('taxRate'),labor:g('labor'),sgdLabor:g('sgdLabor'),fdLabor:g('fdLabor'),tolerance:g('tolerance'),permitCost:g('permitCost'),miscCost:g('miscCost'),screenCost:g('screenCost'),windows:wins,savedAt:new Date().toLocaleString()};
 }
@@ -1077,30 +1063,17 @@ if (sessionStorage.getItem('estimator_unlocked') === '1') {
 document.getElementById('jobDate').valueAsDate=new Date();
 addWindow();
 
-function handleDimChange(selId, customId) {
+function dimSelChange(selId, inputId) {
   const sel = document.getElementById(selId);
-  const custom = document.getElementById(customId);
-  if (!sel || !custom) return;
-  if (sel.value === 'custom') {
-    custom.style.display = 'block';
-    custom.focus();
-  } else {
-    custom.style.display = 'none';
-  }
-}
-
-function syncCustom(customId, selId) {
-  // When typing custom value, keep select showing custom
-  const sel = document.getElementById(selId);
-  if (sel) sel.value = 'custom';
+  const input = document.getElementById(inputId);
+  if (!sel || !input) return;
+  if (sel.value) input.value = sel.value;
 }
 
 function getDimValue(selId, customId) {
-  const sel = document.getElementById(selId);
-  const custom = document.getElementById(customId);
-  if (!sel) return 0;
-  if (sel.value === 'custom') return parseFloat(custom ? custom.value : 0) || 0;
-  return parseFloat(sel.value) || 0;
+  // selId is now the -sel dropdown, customId is the actual input
+  const input = document.getElementById(customId);
+  return parseFloat(input ? input.value : 0) || 0;
 }
 
 
@@ -1543,9 +1516,7 @@ function startMic(fieldId, winId) {
         field.style.display = 'block';
         field.value = val;
         // Set the select to custom
-        const selId = fieldId.replace('-custom','');
-        const sel = document.getElementById(selId);
-        if (sel) sel.value = 'custom';
+
         updatePrice(winId);
       }
       showToast('Got: ' + val + '"');
