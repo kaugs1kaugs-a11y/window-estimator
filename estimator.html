@@ -210,6 +210,7 @@ const SGD_PANELS = { 'XX': 2, 'XXX': 3, 'OXXO': 4 };
 // Configs available per type
 const TYPE_CONFIGS = {
   'FD5555': ['X','XX'],
+  'HR5510': ['XO','OX','XOX'],
   'SGD770NS': ['XX','XXX','OXXO'],
   'SGD5570NS': ['XX','XXX','OXXO'],
   'SGD5570': ['XX','XXX','OXXO']
@@ -244,14 +245,19 @@ const priceList = {
     {w:36,h:61.75,cost:812.31}
   ],
   'HR5510': [
-    // XO config
-    {w:25.5,h:25,cost:309.97},{w:25.5,h:37.375,cost:387.79},{w:25.5,h:49.625,cost:464.80},{w:25.5,h:62,cost:541.82},
-    {w:36,h:25,cost:370.32},{w:36,h:37.375,cost:474.33},{w:36,h:49.625,cost:577.95},{w:36,h:62,cost:682.75},
-    {w:52.125,h:25,cost:459.24},{w:52.125,h:37.375,cost:606.93},{w:52.125,h:49.625,cost:753.03},{w:52.125,h:62,cost:899.92},
-    {w:73,h:25,cost:575.56},{w:73,h:37,cost:777.25},{w:73,h:49,cost:977.34},{w:73,h:62,cost:1330.66},{w:73,h:75,cost:2517.31},
+    // XO / OX config (same price)
+    {w:25.5,h:25,cfg:'XO',cost:309.97},{w:25.5,h:37.375,cfg:'XO',cost:387.79},{w:25.5,h:49.625,cfg:'XO',cost:464.80},{w:25.5,h:62,cfg:'XO',cost:541.82},
+    {w:36,h:25,cfg:'XO',cost:370.32},{w:36,h:37.375,cfg:'XO',cost:474.33},{w:36,h:49.625,cfg:'XO',cost:577.95},{w:36,h:62,cfg:'XO',cost:682.75},
+    {w:52.125,h:25,cfg:'XO',cost:459.24},{w:52.125,h:37.375,cfg:'XO',cost:606.93},{w:52.125,h:49.625,cfg:'XO',cost:753.03},{w:52.125,h:62,cfg:'XO',cost:899.92},
+    {w:73,h:25,cfg:'XO',cost:575.56},{w:73,h:37,cfg:'XO',cost:777.25},{w:73,h:49,cfg:'XO',cost:977.34},{w:73,h:62,cfg:'XO',cost:1330.66},{w:73,h:75,cfg:'XO',cost:2517.31},
+    // OX same pricing as XO
+    {w:25.5,h:25,cfg:'OX',cost:309.97},{w:25.5,h:37.375,cfg:'OX',cost:387.79},{w:25.5,h:49.625,cfg:'OX',cost:464.80},{w:25.5,h:62,cfg:'OX',cost:541.82},
+    {w:36,h:25,cfg:'OX',cost:370.32},{w:36,h:37.375,cfg:'OX',cost:474.33},{w:36,h:49.625,cfg:'OX',cost:577.95},{w:36,h:62,cfg:'OX',cost:682.75},
+    {w:52.125,h:25,cfg:'OX',cost:459.24},{w:52.125,h:37.375,cfg:'OX',cost:606.93},{w:52.125,h:49.625,cfg:'OX',cost:753.03},{w:52.125,h:62,cfg:'OX',cost:899.92},
+    {w:73,h:25,cfg:'OX',cost:575.56},{w:73,h:37,cfg:'OX',cost:777.25},{w:73,h:49,cfg:'OX',cost:977.34},{w:73,h:62,cfg:'OX',cost:1330.66},{w:73,h:75,cfg:'OX',cost:2517.31},
     // XOX config
-    {w:109,h:49,cost:1474.69},{w:109,h:62,cost:1747.82},
-    {w:120,h:49,cost:1692.64},{w:120,h:62,cost:1845.48}
+    {w:109,h:49,cfg:'XOX',cost:1474.69},{w:109,h:62,cfg:'XOX',cost:1747.82},
+    {w:120,h:49,cfg:'XOX',cost:1692.64},{w:120,h:62,cfg:'XOX',cost:1845.48}
   ],
   'PW5520': [
     // Small — 7/8" LIG no argon (verified vs PGT quote 8799976)
@@ -293,7 +299,19 @@ const priceList = {
     {w:144,h:79,cfg:'OXXO',cost:4875.92},{w:144,h:96,cfg:'OXXO',cost:5676.46}
   ],
   'SGD5570NS': [
-    {w:72,h:79,cfg:'XX',cost:3106.03}
+    // XX (2-panel) — verified vs PGT quote 8801852
+    {w:60,h:79,cfg:'XX',cost:2812.78},{w:72,h:79,cfg:'XX',cost:3106.03},
+    {w:96,h:79,cfg:'XX',cost:3689.51},{w:109,h:79,cfg:'XX',cost:5516.40},{w:120,h:79,cfg:'XX',cost:5516.40},
+    {w:60,h:96,cfg:'XX',cost:3281.07},{w:72,h:96,cfg:'XX',cost:3623.61},
+    {w:96,h:96,cfg:'XX',cost:4308.70},{w:109,h:96,cfg:'XX',cost:6358.42},{w:120,h:96,cfg:'XX',cost:6358.42},
+    // XXX (3-panel)
+    {w:109,h:96,cfg:'XXX',cost:5808.14},{w:120,h:96,cfg:'XXX',cost:6882.04},
+    {w:144,h:79,cfg:'XXX',cost:5842.85},{w:144,h:96,cfg:'XXX',cost:6882.04},
+    // OXXO (4-panel)
+    {w:120,h:79,cfg:'OXXO',cost:5978.65},{w:120,h:96,cfg:'OXXO',cost:6972.59},
+    {w:144,h:79,cfg:'OXXO',cost:6587.29},{w:144,h:96,cfg:'OXXO',cost:7658.68},
+    {w:191,h:80,cfg:'OXXO',cost:7754.25},
+    {w:239,h:80,cfg:'OXXO',cost:11411.56},{w:239,h:96,cfg:'OXXO',cost:13127.29},{w:239,h:120,cfg:'OXXO',cost:15949.12}
   ],
   'SGD5570': [
     {w:71,h:79,cfg:'XX',cost:2860.06}
@@ -408,7 +426,7 @@ function updatePrice(id) {
   const cfgField = document.getElementById('w'+id+'-configfield');
   if (cfgField) {
     const comboField = document.getElementById('w'+id+'-combofield');
-    if (isSGD(type) || FD_TYPES.includes(type)) {
+    if (isSGD(type) || FD_TYPES.includes(type) || type==='HR5510') {
       cfgField.classList.add('show');
       if (comboField) comboField.classList.remove('show');
       const miscFieldSGD = document.getElementById('w'+id+'-miscfield');
@@ -457,7 +475,7 @@ function updatePrice(id) {
   }
 
   if (!type || !width || !height) { box.classList.remove('show'); updateTotals(); return; }
-  if ((isSGD(type) || FD_TYPES.includes(type)) && !cfg) { box.innerHTML='<div class="price-nomatch">Select a configuration</div>'; box.classList.add('show'); updateTotals(); return; }
+  if ((isSGD(type) || FD_TYPES.includes(type) || type==='HR5510') && !cfg) { box.innerHTML='<div class="price-nomatch">Select a configuration</div>'; box.classList.add('show'); updateTotals(); return; }
 
   // COMBO UNIT LOGIC
   if (COMBO_TYPES.includes(type)) {
@@ -656,7 +674,7 @@ function updateTotals() {
     const type=g('w'+i+'-type'), width=getDimValue('w'+i+'-width-sel','w'+i+'-width'), height=getDimValue('w'+i+'-height-sel','w'+i+'-height');
     const qty=parseInt(g('w'+i+'-qty'))||1, cfg=g('w'+i+'-config');
     if (!type||!width||!height) continue;
-    if ((isSGD(type)||FD_TYPES.includes(type))&&!cfg) continue;
+    if ((isSGD(type)||FD_TYPES.includes(type)||type==='HR5510')&&!cfg) continue;
     if (MISC_ITEM_TYPES.includes(type)) {
       const cost = parseFloat(g('w'+i+'-misccost'))||0;
       const miscLabor = parseFloat(g('w'+i+'-misclabor'))||0;
