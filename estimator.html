@@ -171,6 +171,7 @@
 
 <div class="totals-card" id="totalsCard">
   <div class="section-title">Estimate Total</div>
+  <div class="total-row" style="color:var(--muted);font-size:0.82rem"><span>Product cost (PGT)</span><span id="totProductCost">$0.00</span></div>
   <div class="total-row"><span>Windows subtotal</span><span id="totWindows">$0.00</span></div>
   <div class="total-row"><span>Tax</span><span id="totTax">$0.00</span></div>
   <div class="total-row"><span>Labor</span><span id="totLabor">$0.00</span></div>
@@ -378,7 +379,7 @@ function getLaborCost(type, cfg, qty) {
 function calcWindowPrice(cost) {
   const markup = parseFloat(g('markup')) / 100 || 0.3577;
   const tax = parseFloat(g('taxRate')) / 100 || 0.07;
-  const withMarkup = cost * (1 + markup);
+  const withMarkup = cost / (1 - markup);
   const withTax = withMarkup * (1 + tax);
   return { cost, withMarkup, withTax, tax: withMarkup * tax };
 }
@@ -501,7 +502,7 @@ function updatePrice(id) {
     const unitCostTotal = unitMatch.cost * units;
     const mullCostTotal = mullCost * mullCount;
     const totalPGT = unitCostTotal + mullCostTotal;
-    const withMarkup = totalPGT * (1+markup);
+    const withMarkup = totalPGT / (1-markup);
     const withTax = withMarkup * (1+tax);
     const taxAmt = withMarkup * tax;
     const labor = laborPer * units * qty;
@@ -532,7 +533,7 @@ function updatePrice(id) {
     const miscLabor = parseFloat(g('w'+id+'-misclabor'))||0;
     const desc = g('w'+id+'-miscdesc')||'Miscellaneous item';
     if (!cost) { box.innerHTML='<div class="price-nomatch">Enter item cost above</div>'; box.classList.add('show'); updateTotals(); return; }
-    const withMarkup = cost * (1+markup);
+    const withMarkup = cost / (1-markup);
     const taxAmt = withMarkup * tax;
     const adder = parseFloat(g('w'+id+'-adder'))||0;
     const adderDesc = g('w'+id+'-adderdesc')||'Additional charge';
@@ -665,8 +666,8 @@ function updatePrice(id) {
 }
 
 function updateTotals() {
-  let windowsTotal=0, taxTotal=0, laborTotal=0;
-  const markup = parseFloat(g('markup'))/100||0.3577;
+  let windowsTotal=0, taxTotal=0, laborTotal=0, productCostTotal=0;
+  const margin = parseFloat(g('markup'))/100||0.3577;
   const tax = parseFloat(g('taxRate'))/100||0.07;
 
   for (let i=1; i<=winCount; i++) {
@@ -679,7 +680,8 @@ function updateTotals() {
       const cost = parseFloat(g('w'+i+'-misccost'))||0;
       const miscLabor = parseFloat(g('w'+i+'-misclabor'))||0;
       if (!cost) continue;
-      const wm = cost*(1+markup);
+      const wm = cost/(1-margin);
+      productCostTotal += cost*qty;
       windowsTotal += wm*qty;
       taxTotal += wm*tax*qty;
       laborTotal += miscLabor*qty;
@@ -690,7 +692,8 @@ function updateTotals() {
       const leg = parseFloat(g('w'+i+'-leg'))||0;
       const arMatch = findARPrice(type,width,height,leg);
       if (!arMatch) continue;
-      const wm = arMatch.cost*(1+markup);
+      const wm = arMatch.cost/(1-margin);
+      productCostTotal += arMatch.cost*qty;
       windowsTotal += wm*qty;
       taxTotal += wm*tax*qty;
       laborTotal += (parseFloat(g('labor'))||497.77)*qty;
@@ -699,10 +702,10 @@ function updateTotals() {
     if (MULL_TYPES.includes(type)) {
       const mullMatch = findPrice('MULL',0,height,null);
       if (!mullMatch) continue;
-      const wm = mullMatch.cost*(1+markup);
+      const wm = mullMatch.cost/(1-margin);
+      productCostTotal += mullMatch.cost*qty;
       windowsTotal += wm*qty;
       taxTotal += wm*tax*qty;
-      // no labor on mull bars
       continue;
     }
     if (COMBO_TYPES.includes(type)) {
@@ -714,20 +717,34 @@ function updateTotals() {
       if (!unitMatch) continue;
       const mullCost = mullMatch?mullMatch.cost:91.30;
       const totalPGT = (unitMatch.cost*units)+(mullCost*(units-1));
-      const wm = totalPGT*(1+markup);
+      const wm = totalPGT/(1-margin);
+      productCostTotal += totalPGT*qty;
       windowsTotal += wm*qty;
       taxTotal += wm*tax*qty;
       laborTotal += (parseFloat(g('labor'))||497.77)*units*qty;
       continue;
     }
     const match = findPrice(type,width,height,cfg);
-    if (!match) continue;
-    const withMarkup = match.cost*(1+markup);
+    if (!match) {
+      if (type==='PW5520') {
+        const nearest = findPW5520Nearest(width,height);
+        if (nearest) {
+          const wm = nearest.cost/(1-margin);
+          productCostTotal += nearest.cost*qty;
+          windowsTotal += wm*qty;
+          taxTotal += wm*tax*qty;
+          laborTotal += getLaborCost(type,cfg,qty);
+          laborTotal += parseFloat(g('w'+i+'-adder'))||0;
+        }
+      }
+      continue;
+    }
+    const withMarkup = match.cost/(1-margin);
+    productCostTotal += match.cost*qty;
     windowsTotal += withMarkup*qty;
     taxTotal += withMarkup*tax*qty;
     laborTotal += getLaborCost(type,cfg,qty);
     laborTotal += parseFloat(g('w'+i+'-adder'))||0;
-    // Screen cost
     const scrOpt=g('w'+i+'-screen'),scrQty=parseInt(g('w'+i+'-screenqty'))||1,scrCost=parseFloat(g('screenCost'))||350;
     if(scrOpt==='Box Screen'){const sp=calcWindowPrice(scrCost*scrQty);windowsTotal+=sp.withMarkup;taxTotal+=sp.tax;}
   }
@@ -735,6 +752,7 @@ function updateTotals() {
   const permit = parseFloat(g('permitCost'))||0;
   const misc = parseFloat(g('miscCost'))||0;
   calcInstallDays();
+  document.getElementById('totProductCost').textContent = fmt(productCostTotal);
   document.getElementById('totWindows').textContent = fmt(windowsTotal);
   document.getElementById('totTax').textContent = fmt(taxTotal);
   document.getElementById('totLabor').textContent = fmt(laborTotal);
