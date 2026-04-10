@@ -254,7 +254,22 @@ const priceList = {
     {w:120,h:49,cost:1692.64},{w:120,h:62,cost:1845.48}
   ],
   'PW5520': [
-    {w:52,h:25,cost:661.42},{w:52,h:63,cost:1351.11}
+    // Small — 7/8" LIG no argon (verified vs PGT quote 8799976)
+    {w:24,h:24,cost:293.13},{w:24,h:36,cost:342.24},{w:24,h:48,cost:400.27},
+    {w:36,h:24,cost:342.24},{w:48,h:48,cost:624.96},
+    {w:52,h:16,cost:400.27},{w:52,h:24,cost:496.99},
+    // Medium — 7/8" LIG with argon
+    {w:36,h:36,cost:414.41},{w:36,h:48,cost:511.13},{w:36,h:62,cost:863.79},
+    {w:52,h:36,cost:674.81},{w:52,h:48,cost:909.17},
+    {w:60,h:48,cost:909.17},
+    // Large — 1" LIG with argon
+    {w:60,h:62,cost:1556.46},
+    {w:72,h:36,cost:999.94},{w:72,h:48,cost:1211.24},{w:72,h:62,cost:1805.70},
+    {w:73,h:36,cost:1211.24},{w:73,h:48,cost:1556.46},{w:73,h:49.5,cost:1556.46},{w:73,h:62,cost:1805.70},
+    // XL — 1" TLIG tempered
+    {w:83,h:72,cost:2339.87},
+    {w:84,h:62,cost:2354.01},{w:84,h:70,cost:2354.01},
+    {w:96,h:24,cost:1611.51},{w:96,h:38,cost:2542.26},{w:96,h:49,cost:2354.01},{w:96,h:62,cost:2783.31}
   ],
   'AR5520': [
     {w:36,h:18,cost:485.02}
@@ -351,6 +366,19 @@ function calcWindowPrice(cost) {
 }
 
 function fmt(n) { return '$' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,','); }
+
+// PW5520 nearest-catalog fallback — used when size is outside tolerance
+// Returns best match regardless of distance, flagged as approximate
+function findPW5520Nearest(width, height) {
+  const list = priceList['PW5520'];
+  if (!list) return null;
+  let best = null, bestDist = Infinity;
+  for (const item of list) {
+    const dist = Math.abs(item.w - width) + Math.abs(item.h - height);
+    if (dist < bestDist) { bestDist = dist; best = item; }
+  }
+  return best ? { cost: best.cost, matchW: best.w, matchH: best.h, approx: true, dist: bestDist } : null;
+}
 
 function findARPrice(type, width, height, leg) {
   const list = priceList[type];
@@ -555,7 +583,34 @@ function updatePrice(id) {
   }
 
   const match = findPrice(type, width, height, cfg);
-  if (!match) { box.innerHTML='<div class="price-nomatch">No match found — try adjusting size or tolerance</div>'; box.classList.add('show'); updateTotals(); return; }
+  if (!match) {
+    // PW5520 nearest-catalog fallback
+    if (type === 'PW5520') {
+      const nearest = findPW5520Nearest(width, height);
+      if (nearest) {
+        const p = calcWindowPrice(nearest.cost);
+        const labor = getLaborCost(type, cfg, qty);
+        const lineWindows = p.withMarkup * qty;
+        const lineTax = p.tax * qty;
+        const adder = parseFloat(g('w'+id+'-adder'))||0;
+        const adderDesc = g('w'+id+'-adderdesc')||'Additional charge';
+        const lineTotal = lineWindows + lineTax + labor + adder;
+        box.innerHTML = `
+          <div class="price-row" style="color:var(--orange);font-weight:600">⚠ No exact match — using nearest catalog size</div>
+          <div class="price-row"><span>PGT cost (${nearest.matchW}" × ${nearest.matchH}")</span><span>${fmt(nearest.cost)}</span></div>
+          <div class="price-row"><span>After markup (${g('markup')||35.77}%)</span><span>${fmt(p.withMarkup)}</span></div>
+          <div class="price-row"><span>Tax (${g('taxRate')||7}%)</span><span>${fmt(p.tax)}</span></div>
+          <div class="price-row"><span>Labor (${qty} × ${fmt(parseFloat(g('labor'))||497.77)})</span><span>${fmt(labor)}</span></div>
+          ${adder?`<div class="price-row"><span>${adderDesc}</span><span>${fmt(adder)}</span></div>`:''}
+          ${qty>1?`<div class="price-row"><span>× ${qty}</span><span></span></div>`:''}
+          <div class="price-row total"><span>Line Total (approx)</span><span>${fmt(lineTotal)}</span></div>
+          <div class="match-note">Your size: ${width}" × ${height}" · Nearest catalog: ${nearest.matchW}" × ${nearest.matchH}" · Verify with PGT quote for exact price</div>
+        `;
+        box.classList.add('show'); updateTotals(); return;
+      }
+    }
+    box.innerHTML='<div class="price-nomatch">No match found — try adjusting size or tolerance</div>'; box.classList.add('show'); updateTotals(); return;
+  }
 
   const p = calcWindowPrice(match.cost);
   const labor = getLaborCost(type, cfg, qty);
