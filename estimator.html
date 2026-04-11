@@ -270,7 +270,12 @@ const colorDeltaList = {
     {w:25.5,h:25,delta:70.17},{w:25.5,h:37.375,delta:87.36},{w:25.5,h:49.625,delta:104.38},{w:25.5,h:62,delta:121.58},
     {w:36,h:25,delta:84.76},{w:36,h:37.375,delta:101.95},{w:36,h:49.625,delta:118.97},{w:36,h:62,delta:136.17},
     {w:52.125,h:25,delta:107.16},{w:52.125,h:37.375,delta:124.36},{w:52.125,h:49.625,delta:141.38},{w:52.125,h:62,delta:158.57},
-    {w:73,h:25,delta:136.17},{w:73,h:37,delta:152.85},{w:73,h:49,delta:169.52},{w:73,h:62,delta:187.58},{w:73,h:75,delta:205.65}
+    {w:73,h:25,delta:136.17},{w:73,h:37,delta:152.85},{w:73,h:49,delta:169.52},{w:73,h:62,delta:187.58},{w:73,h:75,delta:205.65},
+    // XOX sizes
+    {w:105,h:37,delta:202.95},{w:105,h:49,delta:220.10},{w:105,h:62,delta:238.68},
+    {w:109,h:37,delta:208.66},{w:109,h:49,delta:225.81},{w:109,h:62,delta:244.39},
+    {w:110,h:25,delta:192.94},{w:110,h:37.375,delta:210.63},{w:110,h:49.625,delta:228.14},{w:110,h:62,delta:245.82},
+    {w:120,h:49,delta:241.53},{w:120,h:62,delta:260.11}
   ],
   'FD5555': [
     {w:36,h:79,delta:556.51},{w:36,h:96,delta:556.51},
@@ -336,7 +341,9 @@ const priceList = {
     {w:52.125,h:25,cfg:'OX',cost:459.24},{w:52.125,h:37.375,cfg:'OX',cost:606.93},{w:52.125,h:49.625,cfg:'OX',cost:753.03},{w:52.125,h:62,cfg:'OX',cost:899.92},
     {w:73,h:25,cfg:'OX',cost:575.56},{w:73,h:37,cfg:'OX',cost:777.25},{w:73,h:49,cfg:'OX',cost:977.34},{w:73,h:62,cfg:'OX',cost:1330.66},{w:73,h:75,cfg:'OX',cost:2517.31},
     // XOX config
-    {w:109,h:49,cfg:'XOX',cost:1474.69},{w:109,h:62,cfg:'XOX',cost:1747.82},
+    {w:105,h:37,cfg:'XOX',cost:1211.47},{w:105,h:49,cfg:'XOX',cost:1334.15},{w:105,h:62,cfg:'XOX',cost:1687.88},
+    {w:109,h:37,cfg:'XOX',cost:1248.80},{w:109,h:49,cfg:'XOX',cost:1474.69},{w:109,h:62,cfg:'XOX',cost:1747.82},
+    {w:110,h:25,cfg:'XOX',cost:1170.99},{w:110,h:37.375,cfg:'XOX',cost:1317.08},{w:110,h:49.625,cfg:'XOX',cost:1600.14},{w:110,h:62,cfg:'XOX',cost:1747.82},
     {w:120,h:49,cfg:'XOX',cost:1692.64},{w:120,h:62,cfg:'XOX',cost:1845.48}
   ],
   'PW5520': [
@@ -438,9 +445,23 @@ const priceList = {
     {w:52,h:26,cost:691.10},{w:73,h:36.5,cost:1352.76}
   ],
   'AR5520_EB': [
-    {w:26,h:12,leg:6,cost:524.76},{w:36,h:12,leg:6,cost:524.76},
-    {w:52,h:12,leg:6,cost:747.77},{w:62,h:22,leg:6,cost:903.81},
-    {w:73,h:22,leg:6,cost:1091.48}
+    // H=12, leg=6 — verified vs PGT quotes 8797516 & 8802052
+    {w:26, h:12,leg:6,cost:524.76},
+    {w:36, h:12,leg:6,cost:524.76},
+    {w:48, h:12,leg:6,cost:631.48},
+    {w:52, h:12,leg:6,cost:747.77},
+    {w:60, h:12,leg:6,cost:747.77},
+    {w:73, h:12,leg:6,cost:1091.48},
+    {w:84, h:12,leg:6,cost:1091.48},
+    {w:96, h:12,leg:6,cost:1376.32},
+    // H=22, leg=6 — verified vs PGT quotes 8797516 & 8802052
+    {w:36, h:22,leg:6,cost:631.48},
+    {w:48, h:22,leg:6,cost:747.77},
+    {w:52, h:22,leg:6,cost:903.81},
+    {w:62, h:22,leg:6,cost:903.81},
+    {w:73, h:22,leg:6,cost:1091.48},
+    {w:84, h:22,leg:6,cost:1376.32},
+    {w:96, h:22,leg:6,cost:1617.72}
   ]
 };
 
@@ -512,17 +533,51 @@ function calcWindowPrice(cost) {
 
 function fmt(n) { return '$' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,','); }
 
-// PW5520 nearest-catalog fallback — used when size is outside tolerance
-// Returns best match regardless of distance, flagged as approximate
-function findPW5520Nearest(width, height) {
-  const list = priceList['PW5520'];
-  if (!list) return null;
+// PW5520 tier pricing — cost based on W+H sum (verified vs PW_CONFIG.xlsx)
+const PW5520_TIERS = [
+  {max:48,    cost:293.13},
+  {max:60,    cost:342.24},
+  {max:72,    cost:414.41},
+  {max:84,    cost:511.13},
+  {max:96,    cost:674.81},
+  {max:108,   cost:999.94},
+  {max:120,   cost:1556.46},
+  {max:132,   cost:1611.51},
+  {max:Infinity, cost:2300.00}
+];
+
+function findPW5520Price(width, height) {
+  const sum = width + height;
+  const tier = PW5520_TIERS.find(t => sum <= t.max);
+  return tier ? { cost: tier.cost, sum: sum.toFixed(2) } : null;
+}
+
+// AR5520 Half Circle pricing — verified vs PGT quote 8797516
+// Indexed by width; H = W/2 always. Tolerance-matched on width.
+const AR5520_HC_LIST = [
+  {w:24,  cost:409.95},
+  {w:36,  cost:485.02},
+  {w:48,  cost:568.92},
+  {w:52,  cost:691.10},
+  {w:60,  cost:844.19},
+  {w:70,  cost:1092.96},
+  {w:73,  cost:1352.76},
+  {w:76,  cost:1591.96},
+  {w:84,  cost:1987.19},
+  {w:96,  cost:2263.20}
+];
+
+function findHCPrice(width) {
+  const tol = 3;
   let best = null, bestDist = Infinity;
-  for (const item of list) {
-    const dist = Math.abs(item.w - width) + Math.abs(item.h - height);
-    if (dist < bestDist) { bestDist = dist; best = item; }
+  for (const item of AR5520_HC_LIST) {
+    const d = Math.abs(item.w - width);
+    if (d <= tol && d < bestDist) { bestDist = d; best = item; }
   }
-  return best ? { cost: best.cost, matchW: best.w, matchH: best.h, approx: true, dist: bestDist } : null;
+  if (!best) return null;
+  const height = best.w / 2;
+  const sum = best.w + height;
+  return { cost: best.cost, matchW: best.w, height: height.toFixed(1), sum: sum.toFixed(1) };
 }
 
 function findARPrice(type, width, height, leg) {
@@ -703,32 +758,58 @@ function updatePrice(id) {
     box.classList.add('show'); updateTotals(); return;
   }
 
-  // AR5520 HALF CIRCLE / EYEBROW
-  if (AR_TYPES.includes(type)) {
+  // AR5520 HALF CIRCLE — tier pricing based on W+H sum (H auto = W/2)
+  if (type === 'AR5520_HC') {
+    const result = findHCPrice(width);
+    if (!result) { box.innerHTML='<div class="price-nomatch">Enter width</div>'; box.classList.add('show'); updateTotals(); return; }
+    // Auto-fill height field if empty
+    const hField = document.getElementById('w'+id+'-height');
+    if (hField && !hField.value) hField.value = result.height;
+    const markup = parseFloat(g('markup'))/100||0.3577;
+    const tax = parseFloat(g('taxRate'))/100||0.07;
+    const labor = parseFloat(g('labor'))||497.77;
+    const p = calcWindowPrice(result.cost);
+    const adder = parseFloat(g('w'+id+'-adder'))||0;
+    const adderDesc = g('w'+id+'-adderdesc')||'Additional charge';
+    const gridCost = parseFloat(g('w'+id+'-grid'))||0;
+    const gridP = gridCost ? calcWindowPrice(gridCost*qty) : null;
+    const gridTotal = gridP ? gridP.withMarkup + gridP.tax : 0;
+    const lineTotal = (p.withMarkup*qty) + (p.tax*qty) + (labor*qty) + adder + gridTotal;
+    box.innerHTML = `
+      <div class="price-row"><span>PGT cost (W+H = ${result.sum}")</span><span>${fmt(result.cost)}</span></div>
+      <div class="price-row"><span>After markup (${g('markup')||35.77}%)</span><span>${fmt(p.withMarkup)}</span></div>
+      <div class="price-row"><span>Tax (${g('taxRate')||7}%)</span><span>${fmt(p.tax)}</span></div>
+      <div class="price-row"><span>Labor (${qty} × ${fmt(labor)})</span><span>${fmt(labor*qty)}</span></div>
+      ${gridP?`<div class="price-row"><span>Grid w/ markup & tax</span><span>${fmt(gridTotal)}</span></div>`:''}
+      ${adder?`<div class="price-row"><span>${adderDesc}</span><span>${fmt(adder)}</span></div>`:''}
+      ${qty>1?`<div class="price-row"><span>× ${qty} windows</span><span></span></div>`:''}
+      <div class="price-row total"><span>Line Total</span><span>${fmt(lineTotal)}</span></div>
+      <div class="match-note">${width}" wide · matched to ${result.matchW}" · H = ${result.height}" · W+H = ${result.sum}"</div>
+    `;
+    box.classList.add('show'); updateTotals(); return;
+  }
+
+  // AR5520 EYEBROW — still uses lookup table
+  if (type === 'AR5520_EB') {
     const markup = parseFloat(g('markup'))/100||0.3577;
     const tax = parseFloat(g('taxRate'))/100||0.07;
     const labor = parseFloat(g('labor'))||497.77;
     const leg = parseFloat(g('w'+id+'-leg'))||0;
     const arMatch = findARPrice(type, width, height, leg);
-    if (!arMatch) {
-      box.innerHTML='<div class="price-nomatch">No match found — try adjusting size or tolerance</div>';
-      box.classList.add('show'); updateTotals(); return;
-    }
+    if (!arMatch) { box.innerHTML='<div class="price-nomatch">No match found — check size or leg height</div>'; box.classList.add('show'); updateTotals(); return; }
     const p = calcWindowPrice(arMatch.cost);
-    const lineLabor = labor * qty;
     const adder = parseFloat(g('w'+id+'-adder'))||0;
     const adderDesc = g('w'+id+'-adderdesc')||'Additional charge';
-    const lineTotal = (p.withMarkup*qty) + (p.tax*qty) + lineLabor + adder;
-    const isHC = type==='AR5520_HC';
+    const lineTotal = (p.withMarkup*qty) + (p.tax*qty) + (labor*qty) + adder;
     box.innerHTML = `
       <div class="price-row"><span>PGT cost</span><span>${fmt(arMatch.cost)}</span></div>
       <div class="price-row"><span>After markup</span><span>${fmt(p.withMarkup)}</span></div>
       <div class="price-row"><span>Tax</span><span>${fmt(p.tax)}</span></div>
-      <div class="price-row"><span>Labor (${qty} × ${fmt(labor)})</span><span>${fmt(lineLabor)}</span></div>
-      ${qty>1?`<div class="price-row"><span>× ${qty}</span><span></span></div>`:''}
+      <div class="price-row"><span>Labor (${qty} × ${fmt(labor)})</span><span>${fmt(labor*qty)}</span></div>
       ${adder?`<div class="price-row"><span>${adderDesc}</span><span>${fmt(adder)}</span></div>`:''}
+      ${qty>1?`<div class="price-row"><span>× ${qty}</span><span></span></div>`:''}
       <div class="price-row total"><span>Line Total</span><span>${fmt(lineTotal)}</span></div>
-      <div class="match-note">Matched to ${arMatch.w}" × ${arMatch.h}"${arMatch.leg?' leg: '+arMatch.leg+'"':''}</div>
+      <div class="match-note">Matched to ${arMatch.w}" × ${arMatch.h}"${arMatch.leg?' · leg: '+arMatch.leg+'"':''}</div>
     `;
     box.classList.add('show'); updateTotals(); return;
   }
@@ -753,33 +834,36 @@ function updatePrice(id) {
     box.classList.add('show'); updateTotals(); return;
   }
 
+  // PW5520 PICTURE WINDOW — tier pricing based on W+H sum
+  if (type === 'PW5520') {
+    const result = findPW5520Price(width, height);
+    if (!result) { box.innerHTML='<div class="price-nomatch">Enter width and height</div>'; box.classList.add('show'); updateTotals(); return; }
+    const markup = parseFloat(g('markup'))/100||0.3577;
+    const tax = parseFloat(g('taxRate'))/100||0.07;
+    const labor = parseFloat(g('labor'))||497.77;
+    const p = calcWindowPrice(result.cost);
+    const adder = parseFloat(g('w'+id+'-adder'))||0;
+    const adderDesc = g('w'+id+'-adderdesc')||'Additional charge';
+    const gridCost = parseFloat(g('w'+id+'-grid'))||0;
+    const gridP = gridCost ? calcWindowPrice(gridCost*qty) : null;
+    const gridTotal = gridP ? gridP.withMarkup + gridP.tax : 0;
+    const lineTotal = (p.withMarkup*qty) + (p.tax*qty) + (labor*qty) + adder + gridTotal;
+    box.innerHTML = `
+      <div class="price-row"><span>PGT cost (W+H = ${result.sum}")</span><span>${fmt(result.cost)}</span></div>
+      <div class="price-row"><span>After markup (${g('markup')||35.77}%)</span><span>${fmt(p.withMarkup)}</span></div>
+      <div class="price-row"><span>Tax (${g('taxRate')||7}%)</span><span>${fmt(p.tax)}</span></div>
+      <div class="price-row"><span>Labor (${qty} × ${fmt(labor)})</span><span>${fmt(labor*qty)}</span></div>
+      ${gridP?`<div class="price-row"><span>Grid w/ markup & tax</span><span>${fmt(gridTotal)}</span></div>`:''}
+      ${adder?`<div class="price-row"><span>${adderDesc}</span><span>${fmt(adder)}</span></div>`:''}
+      ${qty>1?`<div class="price-row"><span>× ${qty} windows</span><span></span></div>`:''}
+      <div class="price-row total"><span>Line Total</span><span>${fmt(lineTotal)}</span></div>
+      <div class="match-note">${width}" × ${height}" · W+H = ${result.sum}" · any custom size supported</div>
+    `;
+    box.classList.add('show'); updateTotals(); return;
+  }
+
   const match = findPrice(type, width, height, cfg);
   if (!match) {
-    // PW5520 nearest-catalog fallback
-    if (type === 'PW5520') {
-      const nearest = findPW5520Nearest(width, height);
-      if (nearest) {
-        const p = calcWindowPrice(nearest.cost);
-        const labor = getLaborCost(type, cfg, qty);
-        const lineWindows = p.withMarkup * qty;
-        const lineTax = p.tax * qty;
-        const adder = parseFloat(g('w'+id+'-adder'))||0;
-        const adderDesc = g('w'+id+'-adderdesc')||'Additional charge';
-        const lineTotal = lineWindows + lineTax + labor + adder;
-        box.innerHTML = `
-          <div class="price-row" style="color:var(--orange);font-weight:600">⚠ No exact match — using nearest catalog size</div>
-          <div class="price-row"><span>PGT cost (${nearest.matchW}" × ${nearest.matchH}")</span><span>${fmt(nearest.cost)}</span></div>
-          <div class="price-row"><span>After markup (${g('markup')||35.77}%)</span><span>${fmt(p.withMarkup)}</span></div>
-          <div class="price-row"><span>Tax (${g('taxRate')||7}%)</span><span>${fmt(p.tax)}</span></div>
-          <div class="price-row"><span>Labor (${qty} × ${fmt(parseFloat(g('labor'))||497.77)})</span><span>${fmt(labor)}</span></div>
-          ${adder?`<div class="price-row"><span>${adderDesc}</span><span>${fmt(adder)}</span></div>`:''}
-          ${qty>1?`<div class="price-row"><span>× ${qty}</span><span></span></div>`:''}
-          <div class="price-row total"><span>Line Total (approx)</span><span>${fmt(lineTotal)}</span></div>
-          <div class="match-note">Your size: ${width}" × ${height}" · Nearest catalog: ${nearest.matchW}" × ${nearest.matchH}" · Verify with PGT quote for exact price</div>
-        `;
-        box.classList.add('show'); updateTotals(); return;
-      }
-    }
     box.innerHTML='<div class="price-nomatch">No match found — try adjusting size or tolerance</div>'; box.classList.add('show'); updateTotals(); return;
   }
 
@@ -855,14 +939,24 @@ function updateTotals() {
       continue;
     }
     if (AR_TYPES.includes(type)) {
-      const leg = parseFloat(g('w'+i+'-leg'))||0;
-      const arMatch = findARPrice(type,width,height,leg);
-      if (!arMatch) continue;
-      const wm = arMatch.cost/(1-margin);
-      productCostTotal += arMatch.cost*qty;
-      windowsTotal += wm*qty;
-      taxTotal += wm*tax*qty;
-      laborTotal += (parseFloat(g('labor'))||497.77)*qty;
+      if (type === 'AR5520_HC') {
+        const result = findHCPrice(parseFloat(width));
+        if (!result) continue;
+        const wm = result.cost/(1-margin);
+        productCostTotal += result.cost*qty;
+        windowsTotal += wm*qty;
+        taxTotal += wm*tax*qty;
+        laborTotal += (parseFloat(g('labor'))||497.77)*qty;
+      } else {
+        const leg = parseFloat(g('w'+i+'-leg'))||0;
+        const arMatch = findARPrice(type,width,height,leg);
+        if (!arMatch) continue;
+        const wm = arMatch.cost/(1-margin);
+        productCostTotal += arMatch.cost*qty;
+        windowsTotal += wm*qty;
+        taxTotal += wm*tax*qty;
+        laborTotal += (parseFloat(g('labor'))||497.77)*qty;
+      }
       continue;
     }
     if (MULL_TYPES.includes(type)) {
@@ -890,19 +984,22 @@ function updateTotals() {
       laborTotal += (parseFloat(g('labor'))||497.77)*units*qty;
       continue;
     }
+    // PW5520 — tier pricing, handle before findPrice
+    if (type === 'PW5520') {
+      const result = findPW5520Price(parseFloat(width), parseFloat(height));
+      if (!result) continue;
+      const wm = result.cost/(1-margin);
+      productCostTotal += result.cost*qty;
+      windowsTotal += wm*qty;
+      taxTotal += wm*tax*qty;
+      laborTotal += (parseFloat(g('labor'))||497.77)*qty;
+      laborTotal += parseFloat(g('w'+i+'-adder'))||0;
+      const gridCostT = parseFloat(g('w'+i+'-grid'))||0;
+      if (gridCostT) { const gp = calcWindowPrice(gridCostT*qty); productCostTotal += gridCostT*qty; windowsTotal += gp.withMarkup; taxTotal += gp.tax; }
+      continue;
+    }
     const match = findPrice(type,width,height,cfg);
     if (!match) {
-      if (type==='PW5520') {
-        const nearest = findPW5520Nearest(width,height);
-        if (nearest) {
-          const wm = nearest.cost/(1-margin);
-          productCostTotal += nearest.cost*qty;
-          windowsTotal += wm*qty;
-          taxTotal += wm*tax*qty;
-          laborTotal += getLaborCost(type,cfg,qty);
-          laborTotal += parseFloat(g('w'+i+'-adder'))||0;
-        }
-      }
       continue;
     }
     const withMarkup = match.cost/(1-margin);
