@@ -206,13 +206,13 @@
 let winCount = 0;
 
 // SGD panel counts per config
-const SGD_PANELS = { 'XX': 2, 'XXX': 3, 'OXXO': 4 };
+const SGD_PANELS = { 'X': 1, 'XX': 2, 'XXX': 3, 'OXXO': 4 };
 
 // Configs available per type
 const TYPE_CONFIGS = {
   'FD5555': ['X','XX'],
   'HR5510': ['XO','OX','XOX'],
-  'SGD770NS': ['XX','XXX','OXXO'],
+  'SGD770NS': ['XX','XXX','OXXO','X-POCKET','XX-POCKET','XXX-POCKET'],
   'SGD5570NS': ['XX','XXX','OXXO'],
   'SGD5570': ['XX','XXX','OXXO']
 };
@@ -297,7 +297,40 @@ const priceList = {
     {w:144,h:79,cfg:'XXX',cost:4329.71},{w:144,h:96,cfg:'XXX',cost:5105.64},
     // OXXO (4-panel)
     {w:120,h:79,cfg:'OXXO',cost:4423.34},{w:120,h:96,cfg:'OXXO',cost:5165.96},
-    {w:144,h:79,cfg:'OXXO',cost:4875.92},{w:144,h:96,cfg:'OXXO',cost:5676.46}
+    {w:144,h:79,cfg:'OXXO',cost:4875.92},{w:144,h:96,cfg:'OXXO',cost:5676.46},
+    // X-POCKET (1-panel pocket) — verified vs PGT quote 8801964
+    {w:35.25,h:80,cfg:'X-POCKET',cost:1257.38},{w:47.25,h:80,cfg:'X-POCKET',cost:1480.60},
+    {w:48,h:79.5,cfg:'X-POCKET',cost:1480.60},{w:59.25,h:80,cfg:'X-POCKET',cost:2187.26},
+    {w:72.25,h:80,cfg:'X-POCKET',cost:2540.77},
+    {w:35.25,h:96,cfg:'X-POCKET',cost:1469.20},{w:47.25,h:96,cfg:'X-POCKET',cost:1731.58},
+    {w:48,h:96,cfg:'X-POCKET',cost:1731.58},{w:72.25,h:96,cfg:'X-POCKET',cost:3317.92},
+    {w:35.25,h:120,cfg:'X-POCKET',cost:2098.62},{w:47.25,h:120,cfg:'X-POCKET',cost:2559.27},
+    {w:59.25,h:120,cfg:'X-POCKET',cost:2612.33},{w:72.25,h:120,cfg:'X-POCKET',cost:4192.25},
+    // XX-POCKET (2-panel pocket) — verified vs PGT quote 8801953
+    {w:57.375,h:80,cfg:'XX-POCKET',cost:2210.76},{w:69.375,h:80,cfg:'XX-POCKET',cost:2393.75},
+    {w:93.375,h:80,cfg:'XX-POCKET',cost:2880.93},{w:117.375,h:80,cfg:'XX-POCKET',cost:4337.51},
+    {w:140.375,h:80,cfg:'XX-POCKET',cost:5075.84},{w:141,h:80,cfg:'XX-POCKET',cost:5075.84},
+    {w:57.375,h:84,cfg:'XX-POCKET',cost:2642.95},
+    {w:57.375,h:96,cfg:'XX-POCKET',cost:2642.95},{w:69.375,h:96,cfg:'XX-POCKET',cost:2902.82},
+    {w:72,h:96,cfg:'XX-POCKET',cost:2902.82},
+    {w:93.375,h:96,cfg:'XX-POCKET',cost:3426.14},{w:117.375,h:96,cfg:'XX-POCKET',cost:5006.07},
+    {w:140.375,h:96,cfg:'XX-POCKET',cost:6709.53},
+    {w:57.375,h:108,cfg:'XX-POCKET',cost:3412.61},{w:69.375,h:108,cfg:'XX-POCKET',cost:3828.42},
+    {w:93.375,h:108,cfg:'XX-POCKET',cost:4661.43},{w:117.375,h:108,cfg:'XX-POCKET',cost:5836.62},
+    {w:140.375,h:108,cfg:'XX-POCKET',cost:7431.49},
+    {w:57.375,h:120,cfg:'XX-POCKET',cost:3699.20},{w:69.375,h:120,cfg:'XX-POCKET',cost:4159.50},
+    {w:93.375,h:120,cfg:'XX-POCKET',cost:5082.54},{w:117.375,h:84,cfg:'XX-POCKET',cost:4546.83},
+    {w:117.375,h:120,cfg:'XX-POCKET',cost:6495.57},{w:140.375,h:120,cfg:'XX-POCKET',cost:8378.46},
+    // XXX-POCKET (3-panel pocket) — verified vs PGT quote 8801960
+    {w:85.4375,h:80,cfg:'XXX-POCKET',cost:3421.88},{w:103.4375,h:80,cfg:'XXX-POCKET',cost:3730.17},
+    {w:139.4375,h:80,cfg:'XXX-POCKET',cost:4416.53},{w:175.4375,h:80,cfg:'XXX-POCKET',cost:6644.03},
+    {w:209.4375,h:80,cfg:'XXX-POCKET',cost:7776.11},
+    {w:85.4375,h:96,cfg:'XXX-POCKET',cost:4105.40},{w:103.4375,h:96,cfg:'XXX-POCKET',cost:4463.89},
+    {w:139.4375,h:96,cfg:'XXX-POCKET',cost:5264.89},{w:175.4375,h:96,cfg:'XXX-POCKET',cost:7651.87},
+    {w:209.4375,h:96,cfg:'XXX-POCKET',cost:10153.48},
+    {w:85.4375,h:120,cfg:'XXX-POCKET',cost:5714.87},{w:103.4375,h:120,cfg:'XXX-POCKET',cost:6357.81},
+    {w:139.4375,h:120,cfg:'XXX-POCKET',cost:7758.30},{w:175.4375,h:120,cfg:'XXX-POCKET',cost:9930.63},
+    {w:209.4375,h:120,cfg:'XXX-POCKET',cost:12839.50}
   ],
   'SGD5570NS': [
     // XX (2-panel) — verified vs PGT quote 8801852
@@ -346,10 +379,24 @@ const typeLabels = {
 
 function isSGD(type) { return SGD_TYPES.includes(type); }
 
+function setPocketSide(id, side) {
+  document.getElementById('w'+id+'-pocketside').value = side;
+  const lBtn = document.getElementById('w'+id+'-pocketleft');
+  const rBtn = document.getElementById('w'+id+'-pocketright');
+  const activeStyle = 'background:var(--blue);color:#fff;border-color:var(--blue)';
+  const inactiveStyle = 'background:#fff;color:var(--text);border-color:var(--border)';
+  if (lBtn) lBtn.style.cssText = lBtn.style.cssText.replace(/background:[^;]+;color:[^;]+;border-color:[^;]+/, side==='Left' ? activeStyle : inactiveStyle);
+  if (rBtn) rBtn.style.cssText = rBtn.style.cssText.replace(/background:[^;]+;color:[^;]+;border-color:[^;]+/, side==='Right' ? activeStyle : inactiveStyle);
+  // Simpler approach — just swap inline styles
+  if (lBtn) { lBtn.style.background = side==='Left' ? 'var(--blue)' : '#fff'; lBtn.style.color = side==='Left' ? '#fff' : 'var(--text)'; lBtn.style.borderColor = side==='Left' ? 'var(--blue)' : 'var(--border)'; }
+  if (rBtn) { rBtn.style.background = side==='Right' ? 'var(--blue)' : '#fff'; rBtn.style.color = side==='Right' ? '#fff' : 'var(--text)'; rBtn.style.borderColor = side==='Right' ? 'var(--blue)' : 'var(--border)'; }
+}
+
 function findPrice(type, width, height, cfg) {
   const list = priceList[type];
   if (!list) return null;
-  const tol = parseFloat(g('tolerance')) || 2;
+  const baseTol = parseFloat(g('tolerance')) || 2;
+  const tol = (SGD_TYPES.includes(type)) ? Math.max(baseTol, 3) : baseTol;
   let best = null, bestDist = Infinity;
   for (const item of list) {
     const dw = Math.abs(item.w - width);
@@ -366,7 +413,7 @@ function findPrice(type, width, height, cfg) {
 function getLaborCost(type, cfg, qty) {
   qty = qty || 1;
   if (isSGD(type)) {
-    const panels = SGD_PANELS[cfg] || 2;
+    const panels = SGD_PANELS[cfg.replace('-POCKET','')] || 2;
     const perPanel = parseFloat(g('sgdLabor')) || 771.77;
     return panels * perPanel * qty;
   }
@@ -434,6 +481,14 @@ function updatePrice(id) {
       if (miscFieldSGD) miscFieldSGD.classList.remove('show');
       const screenField = document.getElementById('w'+id+'-screenfield');
       if (screenField) screenField.style.display = isSGD(type) ? 'block' : 'none';
+      const pocketSideField = document.getElementById('w'+id+'-pocketsidefield');
+      if (pocketSideField) {
+        const isPocket = cfg && cfg.includes('POCKET');
+        pocketSideField.style.display = isPocket ? 'block' : 'none';
+        if (isPocket && !document.getElementById('w'+id+'-pocketside').value) {
+          setPocketSide(id, 'Left');
+        }
+      }
       const cfgSel = document.getElementById('w'+id+'-config');
       const configs = TYPE_CONFIGS[type] || ['XX'];
       const curVal = cfgSel.value;
@@ -637,29 +692,37 @@ function updatePrice(id) {
   const lineTax = p.tax * qty;
   const adder = parseFloat(g('w'+id+'-adder'))||0;
   const adderDesc = g('w'+id+'-adderdesc')||'Additional charge';
+  // Grid add-on — margin & tax applied to PGT delta
+  const gridCost = parseFloat(g('w'+id+'-grid'))||0;
+  const gridP = gridCost ? calcWindowPrice(gridCost * qty) : null;
+  const gridTotal = gridP ? gridP.withMarkup + gridP.tax : 0;
   // Screen cost for SGDs
   const screenOpt = g('w'+id+'-screen');
   const screenQty = parseInt(g('w'+id+'-screenqty'))||1;
   const screenUnitCost = parseFloat(g('screenCost'))||350;
   const screenP = (screenOpt==='Box Screen') ? calcWindowPrice(screenUnitCost*screenQty) : null;
   const screenTotal = screenP ? screenP.withMarkup + screenP.tax : 0;
-  const lineTotal = lineWindows + lineTax + labor + adder + screenTotal;
+  const lineTotal = lineWindows + lineTax + labor + adder + screenTotal + gridTotal;
 
   let laborNote;
-  if (isSGD(type)) { laborNote = `${SGD_PANELS[cfg]||2} panels × ${fmt(parseFloat(g('sgdLabor'))||771.77)}`; }
+  if (isSGD(type)) { laborNote = `${SGD_PANELS[cfg.replace('-POCKET','')]||2} panels × ${fmt(parseFloat(g('sgdLabor'))||771.77)}`; }
   else if (FD_TYPES.includes(type)) { laborNote = `${qty} door${qty>1?'s':''} × ${fmt(parseFloat(g('fdLabor'))||1200)}`; }
   else { laborNote = `${qty} window${qty>1?'s':''} × ${fmt(parseFloat(g('labor'))||497.77)}`; }
 
+  const pocketSide = g('w'+id+'-pocketside');
+  const pocketNote = cfg && cfg.includes('POCKET') && pocketSide ? ` · Pocket ${pocketSide}` : '';
+
   box.innerHTML = `
     <div class="price-row"><span>PGT cost</span><span>${fmt(p.cost)}</span></div>
-    <div class="price-row"><span>After markup (${g('markup')||35.77}%)</span><span>${fmt(p.withMarkup)}</span></div>
+    <div class="price-row"><span>After margin (${g('markup')||35.77}%)</span><span>${fmt(p.withMarkup)}</span></div>
     <div class="price-row"><span>Tax (${g('taxRate')||7}%)</span><span>${fmt(p.tax)}</span></div>
     <div class="price-row"><span>Labor (${laborNote})</span><span>${fmt(labor)}</span></div>
-    ${screenP?`<div class="price-row"><span>Box Screen (${screenQty}) w/ markup & tax</span><span>${fmt(screenTotal)}</span></div>`:''}
+    ${gridP?`<div class="price-row"><span>Grid w/ margin & tax (${qty > 1 ? qty+'×' : ''}$${gridCost})</span><span>${fmt(gridTotal)}</span></div>`:''}
+    ${screenP?`<div class="price-row"><span>Box Screen (${screenQty}) w/ margin & tax</span><span>${fmt(screenTotal)}</span></div>`:''}
     ${adder?`<div class="price-row"><span>${adderDesc}</span><span>${fmt(adder)}</span></div>`:''}
     ${qty>1?`<div class="price-row"><span>× ${qty} windows</span><span></span></div>`:''}
     <div class="price-row total"><span>Line Total</span><span>${fmt(lineTotal)}</span></div>
-    <div class="match-note">${match.exact?'Exact match':`Matched to ${match.matchW}" × ${match.matchH}"`}${match.cfg?' · Config: '+match.cfg:''}</div>
+    <div class="match-note">${match.exact?'Exact match':`Matched to ${match.matchW}" × ${match.matchH}"`}${match.cfg?' · Config: '+match.cfg:''}${pocketNote}</div>
   `;
   box.classList.add('show');
   updateTotals();
@@ -745,6 +808,9 @@ function updateTotals() {
     taxTotal += withMarkup*tax*qty;
     laborTotal += getLaborCost(type,cfg,qty);
     laborTotal += parseFloat(g('w'+i+'-adder'))||0;
+    // Grid add-on
+    const gridCostT = parseFloat(g('w'+i+'-grid'))||0;
+    if (gridCostT) { const gp = calcWindowPrice(gridCostT*qty); productCostTotal += gridCostT*qty; windowsTotal += gp.withMarkup; taxTotal += gp.tax; }
     const scrOpt=g('w'+i+'-screen'),scrQty=parseInt(g('w'+i+'-screenqty'))||1,scrCost=parseFloat(g('screenCost'))||350;
     if(scrOpt==='Box Screen'){const sp=calcWindowPrice(scrCost*scrQty);windowsTotal+=sp.withMarkup;taxTotal+=sp.tax;}
   }
@@ -801,6 +867,20 @@ function addWindow(data) {
           <input type="number" id="w${id}-screenqty" value="1" min="1" inputmode="numeric" placeholder="Qty" onchange="updatePrice(${id})">
         </div>
         <div class="settings-note" style="margin-top:4px">Box Screen cost set in Pricing Settings</div>
+      </div>
+      <div class="field" id="w${id}-pocketsidefield" style="display:none">
+        <label>Pocket Side</label>
+        <div class="row2">
+          <button type="button" id="w${id}-pocketleft" onclick="setPocketSide(${id},'Left')"
+            style="min-height:44px;border-radius:10px;border:1.5px solid var(--border);background:#fff;font-size:0.95rem;font-weight:600;cursor:pointer">
+            ← Left
+          </button>
+          <button type="button" id="w${id}-pocketright" onclick="setPocketSide(${id},'Right')"
+            style="min-height:44px;border-radius:10px;border:1.5px solid var(--border);background:#fff;font-size:0.95rem;font-weight:600;cursor:pointer">
+            Right →
+          </button>
+        </div>
+        <input type="hidden" id="w${id}-pocketside" value="Left">
       </div>
     </div>
     <div class="config-field" id="w${id}-miscfield">
@@ -889,6 +969,13 @@ function addWindow(data) {
         </select>
       </div>
     </div>
+    <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
+      <button onclick="toggleGrid(${id})" style="min-height:44px;padding:0 16px;background:#e8f5ed;color:#1a8a4a;border:1.5px solid #1a8a4a;border-radius:10px;font-size:0.85rem;font-weight:600;cursor:pointer;white-space:nowrap">+ Grid $</button>
+      <div style="display:none;flex:1" id="w${id}-gridfield">
+        <input type="number" id="w${id}-grid" placeholder="Grid add-on cost $" inputmode="decimal" step="0.01" oninput="updatePrice(${id})" style="width:100%;min-height:44px;font-size:1rem;padding:0 14px;border:1.5px solid #1a8a4a;border-radius:10px">
+      </div>
+      <div class="settings-note" id="w${id}-gridnote" style="display:none;font-size:0.75rem;color:var(--muted)">PGT delta · margin & tax applied</div>
+    </div>
     <div style="display:flex;align-items:center;gap:8px;margin-top:8px" id="w${id}-adderrow">
       <button onclick="toggleAdder(${id})" style="min-height:44px;padding:0 16px;background:#fff8e8;color:#8a5a00;border:1.5px solid #b87c00;border-radius:10px;font-size:0.85rem;font-weight:600;cursor:pointer;white-space:nowrap">+ Add $</button>
       <div style="display:none;flex:1" id="w${id}-adderfield">
@@ -916,6 +1003,7 @@ function addWindow(data) {
     if (data.misclabor) set('w'+id+'-misclabor', data.misclabor);
     if (data.miscdesc) set('w'+id+'-miscdesc', data.miscdesc);
     if (data.adder) { set('w'+id+'-adder', data.adder); set('w'+id+'-adderdesc', data.adderdesc||''); toggleAdder(id); }
+    if (data.grid) { set('w'+id+'-grid', data.grid); toggleGrid(id); }
     if (data.glass) set('w'+id+'-glass', data.glass);
     if (data.framecolor) set('w'+id+'-framecolor', data.framecolor);
     if (data.screen) set('w'+id+'-screen', data.screen);
@@ -941,6 +1029,20 @@ function toggleAdder(id) {
   if (!showing) document.getElementById('w'+id+'-adder').focus();
   if (showing) { set('w'+id+'-adder',''); updatePrice(id); }
 }
+function toggleGrid(id) {
+  const field = document.getElementById('w'+id+'-gridfield');
+  const note = document.getElementById('w'+id+'-gridnote');
+  const btns = document.querySelectorAll(`#win-${id} button`);
+  let btn = null;
+  btns.forEach(b => { if (b.textContent.includes('Grid')) btn = b; });
+  if (!field) return;
+  const showing = field.style.display !== 'none';
+  field.style.display = showing ? 'none' : 'flex';
+  if (note) note.style.display = showing ? 'none' : 'block';
+  if (btn) btn.textContent = showing ? '+ Grid $' : '✕ No Grid';
+  if (!showing) document.getElementById('w'+id+'-grid').focus();
+  if (showing) { set('w'+id+'-grid',''); updatePrice(id); }
+}
 function duplicateWin(id) {
   const type = g('w'+id+'-type');
   const cfg = g('w'+id+'-config');
@@ -963,7 +1065,7 @@ function collectData() {
   const wins=[];
   for(let i=1;i<=winCount;i++) {
     if(!document.getElementById('win-'+i)) continue;
-    wins.push({type:g('w'+i+'-type'),config:g('w'+i+'-config'),combounits:g('w'+i+'-combounits'),leg:g('w'+i+'-leg'),width:getDimValue('w'+i+'-width-sel','w'+i+'-width'),height:getDimValue('w'+i+'-height-sel','w'+i+'-height'),qty:g('w'+i+'-qty'),room:g('w'+i+'-room'),notes:g('w'+i+'-notes'),misccost:g('w'+i+'-misccost'),misclabor:g('w'+i+'-misclabor'),miscdesc:g('w'+i+'-miscdesc'),adder:g('w'+i+'-adder'),adderdesc:g('w'+i+'-adderdesc'),glass:g('w'+i+'-glass'),framecolor:g('w'+i+'-framecolor'),screen:g('w'+i+'-screen'),screenqty:g('w'+i+'-screenqty')});
+    wins.push({type:g('w'+i+'-type'),config:g('w'+i+'-config'),combounits:g('w'+i+'-combounits'),leg:g('w'+i+'-leg'),width:getDimValue('w'+i+'-width-sel','w'+i+'-width'),height:getDimValue('w'+i+'-height-sel','w'+i+'-height'),qty:g('w'+i+'-qty'),room:g('w'+i+'-room'),notes:g('w'+i+'-notes'),misccost:g('w'+i+'-misccost'),misclabor:g('w'+i+'-misclabor'),miscdesc:g('w'+i+'-miscdesc'),adder:g('w'+i+'-adder'),adderdesc:g('w'+i+'-adderdesc'),grid:g('w'+i+'-grid'),glass:g('w'+i+'-glass'),framecolor:g('w'+i+'-framecolor'),screen:g('w'+i+'-screen'),screenqty:g('w'+i+'-screenqty')});
   }
   return {jobNum:g('jobNum'),jobDate:g('jobDate'),custName:g('custName'),custPhone:g('custPhone'),custAddr:g('custAddr'),jobNotes:g('jobNotes'),installDate:g('installDate'),installDays:g('installDays'),markup:g('markup'),taxRate:g('taxRate'),labor:g('labor'),sgdLabor:g('sgdLabor'),fdLabor:g('fdLabor'),tolerance:g('tolerance'),permitCost:g('permitCost'),miscCost:g('miscCost'),screenCost:g('screenCost'),windows:wins,savedAt:new Date().toLocaleString()};
 }
