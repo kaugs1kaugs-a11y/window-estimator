@@ -530,6 +530,8 @@ function updatePrice(id) {
     }
   }
 
+
+
   if (!type || !width || !height) { box.classList.remove('show'); updateTotals(); return; }
   if ((isSGD(type) || FD_TYPES.includes(type) || type==='HR5510') && !cfg) { box.innerHTML='<div class="price-nomatch">Select a configuration</div>'; box.classList.add('show'); updateTotals(); return; }
 
@@ -961,9 +963,10 @@ function addWindow(data) {
       </div>
       <div class="field">
         <label>Frame Color</label>
-        <select id="w${id}-framecolor">
+        <select id="w${id}-framecolor" onchange="updatePrice(${id})">
           <option value="White">White</option>
           <option value="Bronze">Bronze</option>
+          <option value="Bronze/White">Bronze/White</option>
           <option value="Almond">Almond</option>
           <option value="Black">Black</option>
         </select>
