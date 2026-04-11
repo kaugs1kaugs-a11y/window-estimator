@@ -762,9 +762,9 @@ function updatePrice(id) {
   if (type === 'AR5520_HC') {
     const result = findHCPrice(width);
     if (!result) { box.innerHTML='<div class="price-nomatch">Enter width</div>'; box.classList.add('show'); updateTotals(); return; }
-    // Auto-fill height field if empty
+    // Always force height to W/2 for half circle
     const hField = document.getElementById('w'+id+'-height');
-    if (hField && !hField.value) hField.value = result.height;
+    if (hField) hField.value = result.height;
     const markup = parseFloat(g('markup'))/100||0.3577;
     const tax = parseFloat(g('taxRate'))/100||0.07;
     const labor = parseFloat(g('labor'))||497.77;
