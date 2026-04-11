@@ -230,6 +230,85 @@ const MISC_ITEM_TYPES = ['MISC'];
 // Is this an AR5520?
 const AR_TYPES = ['AR5520_HC','AR5520_EB'];
 
+// Grid cost deltas — PGT add-on cost for standard grid (verified vs quotes 8801990 vs 8801972)
+const gridDeltaList = {
+  'SH5500': [
+    {w:18.125,h:25,delta:8.65},{w:18.125,h:37.375,delta:17.29},{w:18.125,h:49.625,delta:17.29},
+    {w:18.125,h:62,delta:17.29},{w:18.125,h:75,delta:17.29},{w:18.125,h:84,delta:25.94},
+    {w:25.5,h:25,delta:8.65},{w:25.5,h:37.375,delta:17.29},{w:25.5,h:49.625,delta:17.29},
+    {w:25.5,h:62,delta:17.29},{w:25.5,h:75,delta:17.29},{w:25.5,h:84,delta:25.94},
+    {w:36,h:25,delta:12.97},{w:36,h:37.375,delta:25.94},{w:36,h:49.625,delta:25.94},
+    {w:36,h:62,delta:25.94},{w:36,h:75,delta:25.94},{w:36,h:84,delta:38.91},
+    {w:52.125,h:25,delta:17.29},{w:52.125,h:37.375,delta:34.58},{w:52.125,h:49.625,delta:34.58},
+    {w:52.125,h:62,delta:34.58},{w:52.125,h:75,delta:34.58},{w:52.125,h:84,delta:51.88}
+  ],
+  'HR5510': [
+    {w:25.5,h:25,delta:8.73},{w:25.5,h:37.375,delta:13.10},{w:25.5,h:49.625,delta:17.47},{w:25.5,h:62,delta:17.47},
+    {w:36,h:25,delta:8.73},{w:36,h:37.375,delta:13.10},{w:36,h:49.625,delta:17.47},{w:36,h:62,delta:17.47},
+    {w:52.125,h:25,delta:8.73},{w:52.125,h:37.375,delta:13.10},{w:52.125,h:49.625,delta:17.47},{w:52.125,h:62,delta:17.47},
+    {w:73,h:25,delta:26.20},{w:73,h:37,delta:39.30},{w:73,h:49,delta:52.40},{w:73,h:62,delta:52.40},{w:73,h:75,delta:65.51}
+  ],
+  'FD5555': [
+    {w:36,h:79,delta:43.40},{w:36,h:96,delta:43.40},
+    {w:72,h:79,delta:86.80},{w:72,h:96,delta:86.80}
+  ]
+};
+
+// Bronze/White color upcharge deltas — verified vs PGT quotes 8801990 (B/W) vs priceList (White baseline)
+const colorDeltaList = {
+  'SH5500': [
+    {w:18.125,h:25,delta:59.32},{w:18.125,h:37.375,delta:76.34},{w:18.125,h:49.625,delta:93.19},
+    {w:18.125,h:62,delta:110.21},{w:18.125,h:75,delta:128.09},{w:18.125,h:84,delta:140.47},
+    {w:25.5,h:25,delta:69.46},{w:25.5,h:37.375,delta:86.48},{w:25.5,h:49.625,delta:103.33},
+    {w:25.5,h:62,delta:120.36},{w:25.5,h:75,delta:138.24},{w:25.5,h:84,delta:150.62},
+    {w:36,h:25,delta:83.91},{w:36,h:37.375,delta:100.93},{w:36,h:49.625,delta:117.77},
+    {w:36,h:62,delta:134.80},{w:36,h:75,delta:152.68},{w:36,h:84,delta:165.06},
+    {w:52.125,h:25,delta:106.08},{w:52.125,h:37.375,delta:123.11},{w:52.125,h:49.625,delta:139.96},
+    {w:52.125,h:62,delta:156.98},{w:52.125,h:75,delta:174.86},{w:52.125,h:84,delta:187.24}
+  ],
+  'HR5510': [
+    {w:25.5,h:25,delta:70.17},{w:25.5,h:37.375,delta:87.36},{w:25.5,h:49.625,delta:104.38},{w:25.5,h:62,delta:121.58},
+    {w:36,h:25,delta:84.76},{w:36,h:37.375,delta:101.95},{w:36,h:49.625,delta:118.97},{w:36,h:62,delta:136.17},
+    {w:52.125,h:25,delta:107.16},{w:52.125,h:37.375,delta:124.36},{w:52.125,h:49.625,delta:141.38},{w:52.125,h:62,delta:158.57},
+    {w:73,h:25,delta:136.17},{w:73,h:37,delta:152.85},{w:73,h:49,delta:169.52},{w:73,h:62,delta:187.58},{w:73,h:75,delta:205.65}
+  ],
+  'FD5555': [
+    {w:36,h:79,delta:556.51},{w:36,h:96,delta:556.51},
+    {w:72,h:79,delta:1113.02},{w:72,h:96,delta:1113.02}
+  ]
+};
+
+function findColorDelta(type, width, height, color) {
+  if (color !== 'Bronze/White') return null;
+  const list = colorDeltaList[type];
+  if (!list) return null;
+  const tol = 2;
+  let best = null, bestDist = Infinity;
+  for (const item of list) {
+    const dw = Math.abs(item.w - width);
+    const dh = Math.abs(item.h - height);
+    if (dw > tol || dh > tol) continue;
+    const dist = dw + dh;
+    if (dist < bestDist) { bestDist = dist; best = item; }
+  }
+  return best ? best.delta : null;
+}
+
+function findGridDelta(type, width, height) {
+  const list = gridDeltaList[type];
+  if (!list) return null;
+  const tol = 2;
+  let best = null, bestDist = Infinity;
+  for (const item of list) {
+    const dw = Math.abs(item.w - width);
+    const dh = Math.abs(item.h - height);
+    if (dw > tol || dh > tol) continue;
+    const dist = dw + dh;
+    if (dist < bestDist) { bestDist = dist; best = item; }
+  }
+  return best ? best.delta : null;
+}
+
 // Price list — SGDs include config field
 const priceList = {
   'SH5500': [
@@ -480,7 +559,17 @@ function updatePrice(id) {
       const miscFieldSGD = document.getElementById('w'+id+'-miscfield');
       if (miscFieldSGD) miscFieldSGD.classList.remove('show');
       const screenField = document.getElementById('w'+id+'-screenfield');
-      if (screenField) screenField.style.display = isSGD(type) ? 'block' : 'none';
+      if (screenField) {
+        screenField.style.display = isSGD(type) ? 'block' : 'none';
+        if (isSGD(type) && height) {
+          // Auto-select screen price based on height — 79"=$222, 96"=$242
+          const screenPriceSel = document.getElementById('w'+id+'-screenprice');
+          if (screenPriceSel && !screenPriceSel.dataset.manual) {
+            const h = parseFloat(height);
+            screenPriceSel.value = h >= 90 ? '242' : (h >= 75 ? '222' : '0');
+          }
+        }
+      }
       const pocketSideField = document.getElementById('w'+id+'-pocketsidefield');
       if (pocketSideField) {
         const isPocket = cfg && cfg.includes('POCKET');
@@ -531,6 +620,12 @@ function updatePrice(id) {
   }
 
 
+
+  // Auto-refresh grid delta if grid is showing and was auto-filled
+  const gridField = document.getElementById('w'+id+'-gridfield');
+  if (gridField && gridField.style.display !== 'none') {
+    autoFillGridDelta(id);
+  }
 
   if (!type || !width || !height) { box.classList.remove('show'); updateTotals(); return; }
   if ((isSGD(type) || FD_TYPES.includes(type) || type==='HR5510') && !cfg) { box.innerHTML='<div class="price-nomatch">Select a configuration</div>'; box.classList.add('show'); updateTotals(); return; }
@@ -688,7 +783,12 @@ function updatePrice(id) {
     box.innerHTML='<div class="price-nomatch">No match found — try adjusting size or tolerance</div>'; box.classList.add('show'); updateTotals(); return;
   }
 
-  const p = calcWindowPrice(match.cost);
+  const frameColor = g('w'+id+'-framecolor');
+  const colorDelta = findColorDelta(type, width, height, frameColor);
+  const baseCost = match.cost + (colorDelta || 0);
+  const p = calcWindowPrice(baseCost);
+  const colorP = colorDelta ? calcWindowPrice(colorDelta * qty) : null;
+  const colorTotal = colorP ? colorP.withMarkup + colorP.tax : 0;
   const labor = getLaborCost(type, cfg, qty);
   const lineWindows = p.withMarkup * qty;
   const lineTax = p.tax * qty;
@@ -698,13 +798,12 @@ function updatePrice(id) {
   const gridCost = parseFloat(g('w'+id+'-grid'))||0;
   const gridP = gridCost ? calcWindowPrice(gridCost * qty) : null;
   const gridTotal = gridP ? gridP.withMarkup + gridP.tax : 0;
-  // Screen cost for SGDs
-  const screenOpt = g('w'+id+'-screen');
-  const screenQty = parseInt(g('w'+id+'-screenqty'))||1;
-  const screenUnitCost = parseFloat(g('screenCost'))||350;
-  const screenP = (screenOpt==='Box Screen') ? calcWindowPrice(screenUnitCost*screenQty) : null;
+  // Screen cost for SGDs — qty × per-screen price (79"=$222, 96"=$242)
+  const screenQty = parseInt(g('w'+id+'-screenqty'))||0;
+  const screenUnitCost = parseFloat(g('w'+id+'-screenprice'))||0;
+  const screenP = (screenQty > 0 && screenUnitCost > 0) ? calcWindowPrice(screenUnitCost * screenQty) : null;
   const screenTotal = screenP ? screenP.withMarkup + screenP.tax : 0;
-  const lineTotal = lineWindows + lineTax + labor + adder + screenTotal + gridTotal;
+  const lineTotal = lineWindows + lineTax + labor + adder + screenTotal + gridTotal + colorTotal;
 
   let laborNote;
   if (isSGD(type)) { laborNote = `${SGD_PANELS[cfg.replace('-POCKET','')]||2} panels × ${fmt(parseFloat(g('sgdLabor'))||771.77)}`; }
@@ -715,12 +814,14 @@ function updatePrice(id) {
   const pocketNote = cfg && cfg.includes('POCKET') && pocketSide ? ` · Pocket ${pocketSide}` : '';
 
   box.innerHTML = `
-    <div class="price-row"><span>PGT cost</span><span>${fmt(p.cost)}</span></div>
+    <div class="price-row"><span>PGT cost</span><span>${fmt(match.cost)}</span></div>
+    ${colorP?`<div class="price-row"><span>Bronze/White upcharge (PGT)</span><span>${fmt(colorDelta)}</span></div>`:''}
     <div class="price-row"><span>After margin (${g('markup')||35.77}%)</span><span>${fmt(p.withMarkup)}</span></div>
     <div class="price-row"><span>Tax (${g('taxRate')||7}%)</span><span>${fmt(p.tax)}</span></div>
     <div class="price-row"><span>Labor (${laborNote})</span><span>${fmt(labor)}</span></div>
     ${gridP?`<div class="price-row"><span>Grid w/ margin & tax (${qty > 1 ? qty+'×' : ''}$${gridCost})</span><span>${fmt(gridTotal)}</span></div>`:''}
-    ${screenP?`<div class="price-row"><span>Box Screen (${screenQty}) w/ margin & tax</span><span>${fmt(screenTotal)}</span></div>`:''}
+    ${colorP?`<div class="price-row"><span>B/W upcharge w/ margin & tax</span><span>${fmt(colorTotal)}</span></div>`:''}
+    ${screenP?`<div class="price-row"><span>Screens (${screenQty} × $${screenUnitCost}) w/ margin & tax</span><span>${fmt(screenTotal)}</span></div>`:''}
     ${adder?`<div class="price-row"><span>${adderDesc}</span><span>${fmt(adder)}</span></div>`:''}
     ${qty>1?`<div class="price-row"><span>× ${qty} windows</span><span></span></div>`:''}
     <div class="price-row total"><span>Line Total</span><span>${fmt(lineTotal)}</span></div>
@@ -813,8 +914,12 @@ function updateTotals() {
     // Grid add-on
     const gridCostT = parseFloat(g('w'+i+'-grid'))||0;
     if (gridCostT) { const gp = calcWindowPrice(gridCostT*qty); productCostTotal += gridCostT*qty; windowsTotal += gp.withMarkup; taxTotal += gp.tax; }
-    const scrOpt=g('w'+i+'-screen'),scrQty=parseInt(g('w'+i+'-screenqty'))||1,scrCost=parseFloat(g('screenCost'))||350;
-    if(scrOpt==='Box Screen'){const sp=calcWindowPrice(scrCost*scrQty);windowsTotal+=sp.withMarkup;taxTotal+=sp.tax;}
+    // Bronze/White color upcharge
+    const colorDeltaT = findColorDelta(type, parseFloat(width), parseFloat(height), g('w'+i+'-framecolor'));
+    if (colorDeltaT) { const cp = calcWindowPrice(colorDeltaT*qty); productCostTotal += colorDeltaT*qty; windowsTotal += cp.withMarkup; taxTotal += cp.tax; }
+    const scrQty=parseInt(g('w'+i+'-screenqty'))||0;
+    const scrUnitCost=parseFloat(g('w'+i+'-screenprice'))||0;
+    if(scrQty>0&&scrUnitCost>0){const sp=calcWindowPrice(scrUnitCost*scrQty);windowsTotal+=sp.withMarkup;taxTotal+=sp.tax;}
   }
 
   const permit = parseFloat(g('permitCost'))||0;
@@ -859,16 +964,16 @@ function addWindow(data) {
         </select>
       </div>
       <div class="field" id="w${id}-screenfield" style="display:none">
-        <label>Screen Option</label>
-        <div class="row3">
-          <select id="w${id}-screen" onchange="updatePrice(${id})" style="grid-column:span 2">
-            <option value="No Screen">No Screen</option>
-            <option value="Box Screen">Box Screen</option>
-            <option value="Screen Included">Screen Included</option>
+        <label>Screens</label>
+        <div class="row2">
+          <input type="number" id="w${id}-screenqty" value="0" min="0" inputmode="numeric" placeholder="Qty" onchange="updatePrice(${id})" style="min-height:44px;font-size:1rem;padding:0 14px;border:1.5px solid var(--border);border-radius:10px">
+          <select id="w${id}-screenprice" onchange="document.getElementById('w${id}-screenprice').dataset.manual='1';updatePrice(${id})" style="min-height:44px;font-size:0.95rem">
+            <option value="0">No Screen</option>
+            <option value="222">79" — $222/screen</option>
+            <option value="242">96" — $242/screen</option>
           </select>
-          <input type="number" id="w${id}-screenqty" value="1" min="1" inputmode="numeric" placeholder="Qty" onchange="updatePrice(${id})">
         </div>
-        <div class="settings-note" style="margin-top:4px">Box Screen cost set in Pricing Settings</div>
+        <div class="settings-note" style="margin-top:4px">Auto-selects by height · markup & tax applied</div>
       </div>
       <div class="field" id="w${id}-pocketsidefield" style="display:none">
         <label>Pocket Side</label>
@@ -975,7 +1080,7 @@ function addWindow(data) {
     <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
       <button onclick="toggleGrid(${id})" style="min-height:44px;padding:0 16px;background:#e8f5ed;color:#1a8a4a;border:1.5px solid #1a8a4a;border-radius:10px;font-size:0.85rem;font-weight:600;cursor:pointer;white-space:nowrap">+ Grid $</button>
       <div style="display:none;flex:1" id="w${id}-gridfield">
-        <input type="number" id="w${id}-grid" placeholder="Grid add-on cost $" inputmode="decimal" step="0.01" oninput="updatePrice(${id})" style="width:100%;min-height:44px;font-size:1rem;padding:0 14px;border:1.5px solid #1a8a4a;border-radius:10px">
+        <input type="number" id="w${id}-grid" placeholder="Grid add-on cost $" inputmode="decimal" step="0.01" oninput="delete document.getElementById('w${id}-grid').dataset.auto; updatePrice(${id})" style="width:100%;min-height:44px;font-size:1rem;padding:0 14px;border:1.5px solid #1a8a4a;border-radius:10px">
       </div>
       <div class="settings-note" id="w${id}-gridnote" style="display:none;font-size:0.75rem;color:var(--muted)">PGT delta · margin & tax applied</div>
     </div>
@@ -1043,8 +1148,29 @@ function toggleGrid(id) {
   field.style.display = showing ? 'none' : 'flex';
   if (note) note.style.display = showing ? 'none' : 'block';
   if (btn) btn.textContent = showing ? '+ Grid $' : '✕ No Grid';
-  if (!showing) document.getElementById('w'+id+'-grid').focus();
+  if (!showing) {
+    // Auto-populate grid delta if we have a match
+    autoFillGridDelta(id);
+    document.getElementById('w'+id+'-grid').focus();
+  }
   if (showing) { set('w'+id+'-grid',''); updatePrice(id); }
+}
+
+function autoFillGridDelta(id) {
+  const gridInput = document.getElementById('w'+id+'-grid');
+  if (!gridInput) return;
+  // Only auto-fill if empty or previously auto-filled
+  if (gridInput.value && !gridInput.dataset.auto) return;
+  const type = g('w'+id+'-type');
+  const width = getDimValue('w'+id+'-width-sel','w'+id+'-width');
+  const height = getDimValue('w'+id+'-height-sel','w'+id+'-height');
+  if (!type || !width || !height) return;
+  const delta = findGridDelta(type, parseFloat(width), parseFloat(height));
+  if (delta !== null) {
+    gridInput.value = delta.toFixed(2);
+    gridInput.dataset.auto = '1';
+    updatePrice(id);
+  }
 }
 function duplicateWin(id) {
   const type = g('w'+id+'-type');
