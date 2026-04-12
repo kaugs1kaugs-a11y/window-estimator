@@ -367,12 +367,15 @@ const priceList = {
   ],
   'HR5510': [
     // XO / OX config (same price)
+    // h:16.25 — verified vs PGT quote 8802126 (no reinforcement)
+    {w:36,h:16.25,cfg:'XO',cost:370.32},{w:37,h:16.25,cfg:'XO',cost:428.68},{w:52,h:16.25,cfg:'XO',cost:459.24},{w:73,h:16.25,cfg:'XO',cost:575.56},
     {w:25.5,h:25,cfg:'XO',cost:309.97},{w:25.5,h:37.375,cfg:'XO',cost:387.79},{w:25.5,h:49.625,cfg:'XO',cost:464.80},{w:25.5,h:62,cfg:'XO',cost:541.82},
     {w:36,h:25,cfg:'XO',cost:370.32},{w:36,h:37.375,cfg:'XO',cost:474.33},{w:36,h:49.625,cfg:'XO',cost:577.95},{w:36,h:62,cfg:'XO',cost:682.75},{w:36,h:75,cfg:'XO',cost:1549.81},
     {w:52.125,h:25,cfg:'XO',cost:459.24},{w:52.125,h:37.375,cfg:'XO',cost:606.93},{w:52.125,h:49.625,cfg:'XO',cost:753.03},{w:52.125,h:62,cfg:'XO',cost:899.92},
     {w:48,h:75,cfg:'XO',cost:1706.22},{w:52,h:75,cfg:'XO',cost:1706.22},
     {w:73,h:25,cfg:'XO',cost:575.56},{w:73,h:37,cfg:'XO',cost:777.25},{w:73,h:49,cfg:'XO',cost:977.34},{w:73,h:62,cfg:'XO',cost:1330.66},{w:73,h:75,cfg:'XO',cost:2517.31},
     // OX same pricing as XO
+    {w:36,h:16.25,cfg:'OX',cost:370.32},{w:37,h:16.25,cfg:'OX',cost:428.68},{w:52,h:16.25,cfg:'OX',cost:459.24},{w:73,h:16.25,cfg:'OX',cost:575.56},
     {w:25.5,h:25,cfg:'OX',cost:309.97},{w:25.5,h:37.375,cfg:'OX',cost:387.79},{w:25.5,h:49.625,cfg:'OX',cost:464.80},{w:25.5,h:62,cfg:'OX',cost:541.82},
     {w:36,h:25,cfg:'OX',cost:370.32},{w:36,h:37.375,cfg:'OX',cost:474.33},{w:36,h:49.625,cfg:'OX',cost:577.95},{w:36,h:62,cfg:'OX',cost:682.75},{w:36,h:75,cfg:'OX',cost:1549.81},
     {w:52.125,h:25,cfg:'OX',cost:459.24},{w:52.125,h:37.375,cfg:'OX',cost:606.93},{w:52.125,h:49.625,cfg:'OX',cost:753.03},{w:52.125,h:62,cfg:'OX',cost:899.92},
@@ -981,7 +984,7 @@ function updatePrice(id) {
     <div class="price-row"><span>Labor (${laborNote})</span><span>${fmt(labor)}</span></div>
     ${gridP?`<div class="price-row"><span>Grid w/ margin & tax (${qty > 1 ? qty+'×' : ''}$${gridCost})</span><span>${fmt(gridTotal)}</span></div>`:''}
     ${colorP?`<div class="price-row"><span>B/W upcharge w/ margin & tax</span><span>${fmt(colorTotal)}</span></div>`:''}
-    ${reinP?`<div class="price-row"><span>Reinforcement (PGT +$${reinCost} × ${qty}) w/ markup & tax</span><span>${fmt(reinTotal)}</span></div>`:''}
+    ${reinP?`<div class="price-row"><span>Reinforcement (PGT +$${reinCost.toFixed(2)} × ${qty}) w/ markup & tax</span><span>${fmt(reinTotal)}</span></div>`:''}
     ${screenP?`<div class="price-row"><span>Screens (${screenQty} × $${screenUnitCost}) w/ margin & tax</span><span>${fmt(screenTotal)}</span></div>`:''}
     ${woodTotal?`
     <div class="price-row"><span>Wood Trim board (${parseFloat(g('w'+id+'-woodlf')||0).toFixed(2)} LF × $${g('woodCostPerLF')||5.81})</span><span>${fmt((parseFloat(g('w'+id+'-woodlf'))||0)*(parseFloat(g('woodCostPerLF'))||5.81))}</span></div>
@@ -1505,9 +1508,23 @@ function addWindow(data) {
 
 
 // Reinforcement PGT cost add-ons — markup & tax applied
+// SH5500: keyed by WIDTH. HR5510: keyed by HEIGHT.
+// H=62 and H=75 on HR come reinforced — baked into base price, no toggle needed.
 const REINFORCEMENT_COST = {
-  'SH5500': 34.59,   // max 52" wide
-  'HR5510': 127.04   // max 75" tall
+  'SH5500': [
+    {dim:18,   cost:11.79},
+    {dim:25,   cost:14.15},
+    {dim:37,   cost:16.51},
+    {dim:47,   cost:26.79},
+    {dim:52,   cost:35.59}
+  ],
+  'HR5510': [
+    {dim:16.25, cost:27.00},
+    {dim:25,    cost:27.00},
+    {dim:37,    cost:30.97},
+    {dim:49,    cost:34.14}
+    // H=62 and H=75 omitted — reinforcement baked into base price
+  ]
 };
 
 function toggleReinforcement(id) {
@@ -1526,7 +1543,20 @@ function getReinforcement(id) {
   const btn = document.getElementById('w'+id+'-reinbtn');
   if (!btn || btn.dataset.active !== '1') return 0;
   const type = g('w'+id+'-type');
-  return REINFORCEMENT_COST[type] || 0;
+  const table = REINFORCEMENT_COST[type];
+  if (!table) return 0;
+  // SH5500 keys on width, HR5510 keys on height
+  const dim = type === 'SH5500'
+    ? getDimValue('w'+id+'-width-sel','w'+id+'-width')
+    : getDimValue('w'+id+'-height-sel','w'+id+'-height');
+  if (!dim) return 0;
+  const tol = 2;
+  let best = null, bestDist = Infinity;
+  for (const item of table) {
+    const d = Math.abs(item.dim - dim);
+    if (d <= tol && d < bestDist) { bestDist = d; best = item; }
+  }
+  return best ? best.cost : 0;
 }
 
 function toggleWood(id) {
