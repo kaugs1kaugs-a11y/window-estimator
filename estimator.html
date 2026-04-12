@@ -1449,30 +1449,24 @@ function addWindow(data) {
         </select>
       </div>
     </div>
-    <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
-      <button onclick="toggleGrid(${id})" style="min-height:44px;padding:0 16px;background:#e8f5ed;color:#1a8a4a;border:1.5px solid #1a8a4a;border-radius:10px;font-size:0.85rem;font-weight:600;cursor:pointer;white-space:nowrap">+ Grid $</button>
-      <div style="display:none;flex:1" id="w${id}-gridfield">
-        <input type="number" id="w${id}-grid" placeholder="Grid add-on cost $" inputmode="decimal" step="0.01" oninput="delete document.getElementById('w${id}-grid').dataset.auto; updatePrice(${id})" style="width:100%;min-height:44px;font-size:1rem;padding:0 14px;border:1.5px solid #1a8a4a;border-radius:10px">
-      </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
+      <button onclick="toggleGrid(${id})" id="w${id}-gridbtn" style="min-height:44px;padding:0 16px;background:#e8f5ed;color:#1a8a4a;border:1.5px solid #1a8a4a;border-radius:10px;font-size:0.85rem;font-weight:600;cursor:pointer">+ Grid $</button>
+      <button onclick="toggleAdder(${id})" id="w${id}-adderbtn" style="min-height:44px;padding:0 16px;background:#fff8e8;color:#8a5a00;border:1.5px solid #b87c00;border-radius:10px;font-size:0.85rem;font-weight:600;cursor:pointer">+ Add $</button>
+      <button onclick="toggleReinforcement(${id})" id="w${id}-reinbtn" style="min-height:44px;padding:0 16px;background:#eef0f8;color:#1a2a6c;border:1.5px solid #1a2a6c;border-radius:10px;font-size:0.85rem;font-weight:600;cursor:pointer">+ Reinforcement</button>
+      <button onclick="toggleWood(${id})" id="w${id}-woodbtn" style="min-height:44px;padding:0 16px;background:#f5f0e8;color:#5a3e00;border:1.5px solid #8a6a00;border-radius:10px;font-size:0.85rem;font-weight:600;cursor:pointer">+ Wood Trim</button>
+    </div>
+    <div style="display:none" id="w${id}-gridfield">
+      <input type="number" id="w${id}-grid" placeholder="Grid add-on cost $" inputmode="decimal" step="0.01" oninput="delete document.getElementById('w${id}-grid').dataset.auto; updatePrice(${id})" style="width:100%;min-height:44px;font-size:1rem;padding:0 14px;border:1.5px solid #1a8a4a;border-radius:10px;margin-top:6px">
       <div class="settings-note" id="w${id}-gridnote" style="display:none;font-size:0.75rem;color:var(--muted)">PGT delta · margin & tax applied</div>
     </div>
-    <div style="display:flex;align-items:center;gap:8px;margin-top:8px" id="w${id}-adderrow">
-      <button onclick="toggleAdder(${id})" style="min-height:44px;padding:0 16px;background:#fff8e8;color:#8a5a00;border:1.5px solid #b87c00;border-radius:10px;font-size:0.85rem;font-weight:600;cursor:pointer;white-space:nowrap">+ Add $</button>
-      <div style="display:none;flex:1" id="w${id}-adderfield">
-        <input type="number" id="w${id}-adder" placeholder="Extra charge $" inputmode="decimal" step="0.01" oninput="updatePrice(${id})" style="width:100%;min-height:44px;font-size:1rem;padding:0 14px;border:1.5px solid #b87c00;border-radius:10px">
-      </div>
-      <input type="text" id="w${id}-adderdesc" placeholder="Reason..." autocomplete="off" style="display:none;flex:1;min-height:44px;font-size:0.9rem;padding:0 14px;border:1.5px solid var(--border);border-radius:10px" id="w${id}-adderdesc">
+    <div style="display:none" id="w${id}-adderfield">
+      <input type="number" id="w${id}-adder" placeholder="Extra charge $" inputmode="decimal" step="0.01" oninput="updatePrice(${id})" style="width:100%;min-height:44px;font-size:1rem;padding:0 14px;border:1.5px solid #b87c00;border-radius:10px;margin-top:6px">
+      <input type="text" id="w${id}-adderdesc" placeholder="Reason..." autocomplete="off" style="width:100%;min-height:44px;font-size:0.9rem;padding:0 14px;border:1.5px solid var(--border);border-radius:10px;margin-top:6px">
     </div>
-    <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
-      <button onclick="toggleReinforcement(${id})" id="w${id}-reinbtn" style="min-height:44px;padding:0 16px;background:#eef0f8;color:#1a2a6c;border:1.5px solid #1a2a6c;border-radius:10px;font-size:0.85rem;font-weight:600;cursor:pointer;white-space:nowrap">+ Reinforcement</button>
-      <div class="settings-note" id="w${id}-reinnote" style="font-size:0.75rem;color:var(--muted)"></div>
-    </div>
-    <div style="display:flex;align-items:center;gap:8px;margin-top:8px" id="w${id}-woodrow">
-      <button onclick="toggleWood(${id})" style="min-height:44px;padding:0 16px;background:#f5f0e8;color:#5a3e00;border:1.5px solid #8a6a00;border-radius:10px;font-size:0.85rem;font-weight:600;cursor:pointer;white-space:nowrap">+ Wood Trim</button>
-      <div style="display:none;flex:1;flex-direction:column;gap:4px" id="w${id}-woodfield">
-        <input type="number" id="w${id}-woodlf" placeholder="LF (auto-calculated)" inputmode="decimal" step="0.01" oninput="updatePrice(${id})" style="width:100%;min-height:44px;font-size:1rem;padding:0 14px;border:1.5px solid #8a6a00;border-radius:10px">
-        <div class="settings-note" id="w${id}-woodnote" style="color:#5a3e00"></div>
-      </div>
+    <div class="settings-note" id="w${id}-reinnote" style="display:none;font-size:0.75rem;color:var(--muted);margin-top:4px"></div>
+    <div style="display:none" id="w${id}-woodfield">
+      <input type="number" id="w${id}-woodlf" placeholder="LF (auto-calculated)" inputmode="decimal" step="0.01" oninput="updatePrice(${id})" style="width:100%;min-height:44px;font-size:1rem;padding:0 14px;border:1.5px solid #8a6a00;border-radius:10px;margin-top:6px">
+      <div class="settings-note" id="w${id}-woodnote" style="color:#5a3e00;margin-top:4px"></div>
     </div>
     <div class="price-box" id="w${id}-pricebox"></div>
   `;
@@ -1537,15 +1531,12 @@ function getReinforcement(id) {
 
 function toggleWood(id) {
   const field = document.getElementById('w'+id+'-woodfield');
-  const btn = document.querySelector('#w'+id+'-woodrow button');
+  const btn = document.getElementById('w'+id+'-woodbtn');
   if (!field) return;
   const showing = field.style.display !== 'none';
-  field.style.display = showing ? 'none' : 'flex';
+  field.style.display = showing ? 'none' : 'block';
   if (btn) btn.textContent = showing ? '+ Wood Trim' : '✕ No Trim';
-  if (!showing) {
-    // Auto-calculate LF from window dimensions
-    autoFillWoodLF(id);
-  }
+  if (!showing) { autoFillWoodLF(id); }
   if (showing) { set('w'+id+'-woodlf',''); updatePrice(id); }
 }
 
@@ -1575,12 +1566,10 @@ function getWoodTotal(id) {
 
 function toggleAdder(id) {
   const field = document.getElementById('w'+id+'-adderfield');
-  const desc = document.getElementById('w'+id+'-adderdesc');
-  const btn = document.querySelector('#w'+id+'-adderrow button');
+  const btn = document.getElementById('w'+id+'-adderbtn');
   if (!field) return;
   const showing = field.style.display !== 'none';
-  field.style.display = showing ? 'none' : 'flex';
-  if (desc) desc.style.display = showing ? 'none' : 'block';
+  field.style.display = showing ? 'none' : 'block';
   if (btn) btn.textContent = showing ? '+ Add $' : '✕ Remove';
   if (!showing) document.getElementById('w'+id+'-adder').focus();
   if (showing) { set('w'+id+'-adder',''); updatePrice(id); }
@@ -1588,19 +1577,13 @@ function toggleAdder(id) {
 function toggleGrid(id) {
   const field = document.getElementById('w'+id+'-gridfield');
   const note = document.getElementById('w'+id+'-gridnote');
-  const btns = document.querySelectorAll(`#win-${id} button`);
-  let btn = null;
-  btns.forEach(b => { if (b.textContent.includes('Grid')) btn = b; });
+  const btn = document.getElementById('w'+id+'-gridbtn');
   if (!field) return;
   const showing = field.style.display !== 'none';
-  field.style.display = showing ? 'none' : 'flex';
+  field.style.display = showing ? 'none' : 'block';
   if (note) note.style.display = showing ? 'none' : 'block';
   if (btn) btn.textContent = showing ? '+ Grid $' : '✕ No Grid';
-  if (!showing) {
-    // Auto-populate grid delta if we have a match
-    autoFillGridDelta(id);
-    document.getElementById('w'+id+'-grid').focus();
-  }
+  if (!showing) { autoFillGridDelta(id); document.getElementById('w'+id+'-grid').focus(); }
   if (showing) { set('w'+id+'-grid',''); updatePrice(id); }
 }
 
