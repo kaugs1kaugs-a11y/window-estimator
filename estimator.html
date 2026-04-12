@@ -152,8 +152,19 @@
     <div class="settings-note">0 = current prices · 5 = 5% increase · applies to all PGT product costs</div>
   </div>
   <div class="divider"></div>
-  <div class="field">
-    <label>Box Screen Cost $</label>
+  <div class="row2">
+    <div class="field">
+      <label>Wood Trim $/LF</label>
+      <input type="number" id="woodCostPerLF" value="5.81" inputmode="decimal" step="0.01">
+      <div class="settings-note">Your charge per linear foot</div>
+    </div>
+    <div class="field">
+      <label>Wood Trim Labor $</label>
+      <input type="number" id="woodLaborPerWin" value="100" inputmode="numeric">
+      <div class="settings-note">Per window, flat add-on</div>
+    </div>
+  </div>
+  <div class="divider"></div>
     <input type="number" id="screenCost" value="350" inputmode="numeric">
     <div class="settings-note">Per screen, markup & tax applied</div>
   </div>
@@ -172,7 +183,11 @@
 </div>
 
 <div id="windowList"></div>
-<button class="add-btn" onclick="addWindow()">+ Add Window</button>
+<div id="doorList"></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 1rem 0.75rem">
+  <button class="add-btn" style="margin:0;width:100%" onclick="addWindow()">+ Add Window</button>
+  <button class="add-btn" style="margin:0;width:100%;border-color:#8a3a00;color:#8a3a00;background:#fff3ee" onclick="addDoor()">+ Add BHI Door</button>
+</div>
 
 <div class="totals-card" id="totalsCard">
   <div class="section-title">Estimate Total</div>
@@ -353,13 +368,15 @@ const priceList = {
   'HR5510': [
     // XO / OX config (same price)
     {w:25.5,h:25,cfg:'XO',cost:309.97},{w:25.5,h:37.375,cfg:'XO',cost:387.79},{w:25.5,h:49.625,cfg:'XO',cost:464.80},{w:25.5,h:62,cfg:'XO',cost:541.82},
-    {w:36,h:25,cfg:'XO',cost:370.32},{w:36,h:37.375,cfg:'XO',cost:474.33},{w:36,h:49.625,cfg:'XO',cost:577.95},{w:36,h:62,cfg:'XO',cost:682.75},
+    {w:36,h:25,cfg:'XO',cost:370.32},{w:36,h:37.375,cfg:'XO',cost:474.33},{w:36,h:49.625,cfg:'XO',cost:577.95},{w:36,h:62,cfg:'XO',cost:682.75},{w:36,h:75,cfg:'XO',cost:1549.81},
     {w:52.125,h:25,cfg:'XO',cost:459.24},{w:52.125,h:37.375,cfg:'XO',cost:606.93},{w:52.125,h:49.625,cfg:'XO',cost:753.03},{w:52.125,h:62,cfg:'XO',cost:899.92},
+    {w:48,h:75,cfg:'XO',cost:1706.22},{w:52,h:75,cfg:'XO',cost:1706.22},
     {w:73,h:25,cfg:'XO',cost:575.56},{w:73,h:37,cfg:'XO',cost:777.25},{w:73,h:49,cfg:'XO',cost:977.34},{w:73,h:62,cfg:'XO',cost:1330.66},{w:73,h:75,cfg:'XO',cost:2517.31},
     // OX same pricing as XO
     {w:25.5,h:25,cfg:'OX',cost:309.97},{w:25.5,h:37.375,cfg:'OX',cost:387.79},{w:25.5,h:49.625,cfg:'OX',cost:464.80},{w:25.5,h:62,cfg:'OX',cost:541.82},
-    {w:36,h:25,cfg:'OX',cost:370.32},{w:36,h:37.375,cfg:'OX',cost:474.33},{w:36,h:49.625,cfg:'OX',cost:577.95},{w:36,h:62,cfg:'OX',cost:682.75},
+    {w:36,h:25,cfg:'OX',cost:370.32},{w:36,h:37.375,cfg:'OX',cost:474.33},{w:36,h:49.625,cfg:'OX',cost:577.95},{w:36,h:62,cfg:'OX',cost:682.75},{w:36,h:75,cfg:'OX',cost:1549.81},
     {w:52.125,h:25,cfg:'OX',cost:459.24},{w:52.125,h:37.375,cfg:'OX',cost:606.93},{w:52.125,h:49.625,cfg:'OX',cost:753.03},{w:52.125,h:62,cfg:'OX',cost:899.92},
+    {w:48,h:75,cfg:'OX',cost:1706.22},{w:52,h:75,cfg:'OX',cost:1706.22},
     {w:73,h:25,cfg:'OX',cost:575.56},{w:73,h:37,cfg:'OX',cost:777.25},{w:73,h:49,cfg:'OX',cost:977.34},{w:73,h:62,cfg:'OX',cost:1330.66},{w:73,h:75,cfg:'OX',cost:2517.31},
     // XOX config
     {w:105,h:37,cfg:'XOX',cost:1211.47},{w:105,h:49,cfg:'XOX',cost:1334.15},{w:105,h:62,cfg:'XOX',cost:1687.88},
@@ -497,6 +514,20 @@ const typeLabels = {
   'AR5520_HC':'AR5520 Half Circle',
   'AR5520_EB':'AR5520 Eyebrow'
 };
+
+// BHI Door model costs — verified vs quote 114291
+// Fixed add-ons always: Bore $60 + Cutdown $50 + Frame $84.25 = $194.25
+const BHI_DOORS = {
+  'EPHSHVHZ3068_FLUSH_NOGLASS':        { label:'HVHZ 3/0×6/8 Flush — No Glass',                       modelCost: 475.12 },
+  'EPHSHVHZ3068_FLUSH_FULLLITE':       { label:'HVHZ 3/0×6/8 Flush — Full Lite w/Blinds',             modelCost: 1048.25 },
+  'EPHSHVHZ3080_FLUSH_FULLLITE':       { label:'HVHZ 3/0×8/0 Flush — Full Lite w/Blinds',             modelCost: 1340.25 },
+  'EPHSWBD3068_RAISED_HALFLITE2P':     { label:'WBD 3/0×6/8 Raised — ½ Lite/2 Panel w/Blinds',        modelCost: 751.62 },
+  'EPHSWBD3068_RAISED_HALFLITE2P_PRIV':{ label:'WBD 3/0×6/8 Raised — ½ Lite/2 Panel Privacy',         modelCost: 776.37 },
+  'EPHSWBD3068_RAISED_HALFLITE1P':     { label:'WBD 3/0×6/8 Raised — ½ Lite/1 Panel Low-E',           modelCost: 791.87 },
+  'EPHSWBD3068_RAISED_6PANEL':         { label:'WBD 3/0×6/8 Raised — 6 Panel No Glass',               modelCost: 373.37 },
+  'BHI_MANUAL':                        { label:'BHI — Manual Entry',                                   modelCost: 0 }
+};
+const BHI_FIXED_ADDONS = 194.25; // Bore $60 + Cutdown $50 + Frame $84.25
 
 function isSGD(type) { return SGD_TYPES.includes(type); }
 
@@ -928,7 +959,11 @@ function updatePrice(id) {
   const screenUnitCost = parseFloat(g('w'+id+'-screenprice'))||0;
   const screenP = (screenQty > 0 && screenUnitCost > 0) ? calcWindowPrice(screenUnitCost * screenQty) : null;
   const screenTotal = screenP ? screenP.withMarkup + screenP.tax : 0;
-  const lineTotal = lineWindows + lineTax + labor + adder + screenTotal + gridTotal + colorTotal;
+  const woodTotal = getWoodTotal(id);
+  const reinCost = getReinforcement(id);
+  const reinP = reinCost ? calcWindowPrice(reinCost * qty) : null;
+  const reinTotal = reinP ? reinP.withMarkup + reinP.tax : 0;
+  const lineTotal = lineWindows + lineTax + labor + adder + screenTotal + gridTotal + colorTotal + woodTotal + reinTotal;
 
   let laborNote;
   if (isSGD(type)) { laborNote = `${SGD_PANELS[cfg.replace('-POCKET','')]||2} panels × ${fmt(parseFloat(g('sgdLabor'))||771.77)}`; }
@@ -946,7 +981,11 @@ function updatePrice(id) {
     <div class="price-row"><span>Labor (${laborNote})</span><span>${fmt(labor)}</span></div>
     ${gridP?`<div class="price-row"><span>Grid w/ margin & tax (${qty > 1 ? qty+'×' : ''}$${gridCost})</span><span>${fmt(gridTotal)}</span></div>`:''}
     ${colorP?`<div class="price-row"><span>B/W upcharge w/ margin & tax</span><span>${fmt(colorTotal)}</span></div>`:''}
+    ${reinP?`<div class="price-row"><span>Reinforcement (PGT +$${reinCost} × ${qty}) w/ markup & tax</span><span>${fmt(reinTotal)}</span></div>`:''}
     ${screenP?`<div class="price-row"><span>Screens (${screenQty} × $${screenUnitCost}) w/ margin & tax</span><span>${fmt(screenTotal)}</span></div>`:''}
+    ${woodTotal?`
+    <div class="price-row"><span>Wood Trim board (${parseFloat(g('w'+id+'-woodlf')||0).toFixed(2)} LF × $${g('woodCostPerLF')||5.81})</span><span>${fmt((parseFloat(g('w'+id+'-woodlf'))||0)*(parseFloat(g('woodCostPerLF'))||5.81))}</span></div>
+    <div class="price-row"><span>Wood Trim labor (${qty} × $${g('woodLaborPerWin')||100})</span><span>${fmt((parseFloat(g('woodLaborPerWin'))||100)*qty)}</span></div>`:''}
     ${adder?`<div class="price-row"><span>${adderDesc}</span><span>${fmt(adder)}</span></div>`:''}
     ${qty>1?`<div class="price-row"><span>× ${qty} windows</span><span></span></div>`:''}
     <div class="price-row total"><span>Line Total</span><span>${fmt(lineTotal)}</span></div>
@@ -959,6 +998,9 @@ function updatePrice(id) {
 function recalcAll() {
   for (let i = 1; i <= winCount; i++) {
     if (document.getElementById('win-'+i)) updatePrice(i);
+  }
+  for (let i = 1; i <= doorCount; i++) {
+    if (document.getElementById('door-'+i)) updateDoorPrice(i);
   }
   updateTotals();
 }
@@ -1060,15 +1102,39 @@ function updateTotals() {
     taxTotal += p.tax*qty;
     laborTotal += getLaborCost(type,cfg,qty);
     laborTotal += parseFloat(g('w'+i+'-adder'))||0;
+    laborTotal += getWoodTotal(i);
     // Grid add-on
     const gridCostT = parseFloat(g('w'+i+'-grid'))||0;
     if (gridCostT) { const gp = calcWindowPrice(gridCostT*qty); productCostTotal += gridCostT*qty; windowsTotal += gp.withMarkup; taxTotal += gp.tax; }
     // Bronze/White color upcharge
     const colorDeltaT = findColorDelta(type, parseFloat(width), parseFloat(height), g('w'+i+'-framecolor'));
     if (colorDeltaT) { const cp = calcWindowPrice(colorDeltaT*qty); productCostTotal += colorDeltaT*qty; windowsTotal += cp.withMarkup; taxTotal += cp.tax; }
+    const reinCostT = getReinforcement(i);
+    if (reinCostT) { const rp = calcWindowPrice(reinCostT*qty); productCostTotal += reinCostT*qty; windowsTotal += rp.withMarkup; taxTotal += rp.tax; }
     const scrQty=parseInt(g('w'+i+'-screenqty'))||0;
     const scrUnitCost=parseFloat(g('w'+i+'-screenprice'))||0;
     if(scrQty>0&&scrUnitCost>0){const sp=calcWindowPrice(scrUnitCost*scrQty);windowsTotal+=sp.withMarkup;taxTotal+=sp.tax;}
+  }
+
+  // BHI Doors
+  for (let i = 1; i <= doorCount; i++) {
+    if (!document.getElementById('door-'+i)) continue;
+    const modelKey = g('d'+i+'-model');
+    if (!modelKey) continue;
+    const entry = BHI_DOORS[modelKey];
+    if (!entry) continue;
+    const modelCost = modelKey === 'BHI_MANUAL' ? (parseFloat(g('d'+i+'-manualcost'))||0) : entry.modelCost;
+    if (!modelCost) continue;
+    const prefinish = parseFloat(g('d'+i+'-prefinish'))||424.50;
+    const totalBHI = applyPGTAdjust(modelCost + BHI_FIXED_ADDONS + prefinish);
+    const markup = parseFloat(g('markup'))/100||0.3577;
+    const tax = parseFloat(g('taxRate'))/100||0.07;
+    const wm = totalBHI / (1 - markup);
+    const txAmt = wm * tax;
+    productCostTotal += totalBHI;
+    windowsTotal += wm;
+    taxTotal += txAmt;
+    laborTotal += parseFloat(g('fdLabor'))||1200;
   }
 
   const permit = parseFloat(g('permitCost'))||0;
@@ -1081,6 +1147,163 @@ function updateTotals() {
   document.getElementById('totPermit').textContent = fmt(permit);
   document.getElementById('totMisc').textContent = fmt(misc);
   document.getElementById('totGrand').textContent = fmt(windowsTotal+taxTotal+laborTotal+permit+misc);
+}
+
+// ============================================================
+// BHI DOOR LOGIC
+// ============================================================
+let doorCount = 0;
+
+function addDoor(data) {
+  doorCount++;
+  const id = doorCount;
+  const div = document.createElement('div');
+  div.className = 'win-card';
+  div.id = 'door-' + id;
+  div.style.borderLeftColor = '#8a3a00';
+
+  const modelOpts = Object.entries(BHI_DOORS).map(([k,v]) =>
+    `<option value="${k}">${v.label}</option>`
+  ).join('');
+
+  div.innerHTML = `
+    <div class="win-header">
+      <span class="win-label" style="color:#8a3a00">🚪 Door ${id}</span>
+      <div style="display:flex;gap:8px">
+        <button class="del-btn" style="background:#fff3ee;color:#8a3a00;border-color:#8a3a00" onclick="duplicateDoor(${id})">Copy</button>
+        <button class="del-btn" onclick="removeDoor(${id})">Remove</button>
+      </div>
+    </div>
+    <div class="field">
+      <label>BHI Door Model</label>
+      <select id="d${id}-model" onchange="updateDoorPrice(${id})">
+        <option value="">-- select model --</option>
+        ${modelOpts}
+      </select>
+    </div>
+    <div class="config-field show" id="d${id}-manualfield" style="display:none">
+      <div class="field">
+        <label>Manual Door Model Cost $</label>
+        <input type="number" id="d${id}-manualcost" placeholder="BHI door model cost only" inputmode="decimal" step="0.01" oninput="updateDoorPrice(${id})">
+        <div class="settings-note">Add-ons ($194.25) + prefinish added automatically</div>
+      </div>
+      <div class="field">
+        <label>Description</label>
+        <input type="text" id="d${id}-manualdesc" placeholder="Door description..." autocomplete="off">
+      </div>
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label>Handing</label>
+        <select id="d${id}-handing">
+          <option value="L-H Outswing">L-H Outswing</option>
+          <option value="R-H Outswing">R-H Outswing</option>
+          <option value="L-H Inswing">L-H Inswing</option>
+          <option value="R-H Inswing">R-H Inswing</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Prefinish $</label>
+        <select id="d${id}-prefinish" onchange="updateDoorPrice(${id})">
+          <option value="424.50">No Glass — $424.50</option>
+          <option value="606.75">w/Glass 6/8 — $606.75</option>
+          <option value="711.25">w/Glass 8/0 — $711.25</option>
+        </select>
+      </div>
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label>Room</label>
+        <select id="d${id}-room">
+          <option value="">-- room --</option>
+          <option value="Foyer/Entry">Foyer/Entry</option><option value="Living Room">Living Room</option><option value="Dining Room">Dining Room</option><option value="Kitchen">Kitchen</option><option value="Main Bedroom">Main Bedroom</option><option value="Bedroom 2">Bedroom 2</option><option value="Bedroom 3">Bedroom 3</option><option value="Garage">Garage</option><option value="Lanai/Patio">Lanai/Patio</option><option value="Other">Other</option>
+        </select>
+      </div>
+      <div class="field"><label>Notes</label><input type="text" id="d${id}-notes" placeholder="Notes..." autocomplete="off"></div>
+    </div>
+    <div class="price-box" id="d${id}-pricebox"></div>
+  `;
+  document.getElementById('doorList').appendChild(div);
+
+  if (data) {
+    if (data.model) set('d'+id+'-model', data.model);
+    if (data.manualcost) set('d'+id+'-manualcost', data.manualcost);
+    if (data.manualdesc) set('d'+id+'-manualdesc', data.manualdesc);
+    if (data.handing) set('d'+id+'-handing', data.handing);
+    if (data.prefinish) set('d'+id+'-prefinish', data.prefinish);
+    if (data.room) set('d'+id+'-room', data.room);
+    if (data.notes) set('d'+id+'-notes', data.notes);
+    updateDoorPrice(id);
+  } else {
+    div.scrollIntoView({behavior:'smooth', block:'start'});
+  }
+}
+
+function updateDoorPrice(id) {
+  const modelKey = g('d'+id+'-model');
+  const box = document.getElementById('d'+id+'-pricebox');
+  const manualField = document.getElementById('d'+id+'-manualfield');
+
+  // Show/hide manual cost field
+  const isManual = modelKey === 'BHI_MANUAL';
+  if (manualField) manualField.style.display = isManual ? 'block' : 'none';
+
+  if (!modelKey) { box.classList.remove('show'); updateTotals(); return; }
+
+  const entry = BHI_DOORS[modelKey];
+  if (!entry) { box.classList.remove('show'); updateTotals(); return; }
+
+  const modelCost = isManual
+    ? (parseFloat(g('d'+id+'-manualcost')) || 0)
+    : entry.modelCost;
+
+  if (!modelCost) { box.innerHTML = '<div class="price-nomatch">Enter door model cost</div>'; box.classList.add('show'); updateTotals(); return; }
+
+  const prefinish = parseFloat(g('d'+id+'-prefinish')) || 424.50;
+  const totalBHICost = applyPGTAdjust(modelCost + BHI_FIXED_ADDONS + prefinish);
+  const markup = parseFloat(g('markup'))/100 || 0.3577;
+  const tax = parseFloat(g('taxRate'))/100 || 0.07;
+  const withMarkup = totalBHICost / (1 - markup);
+  const taxAmt = withMarkup * tax;
+  const labor = parseFloat(g('fdLabor')) || 1200;
+  const lineTotal = withMarkup + taxAmt + labor;
+  const handing = g('d'+id+'-handing');
+
+  box.innerHTML = `
+    <div class="price-row"><span>Door Model cost (BHI)</span><span>${fmt(modelCost)}</span></div>
+    <div class="price-row"><span>Add-ons (Bore + Cutdown + Frame)</span><span>${fmt(BHI_FIXED_ADDONS)}</span></div>
+    <div class="price-row"><span>Prefinish</span><span>${fmt(prefinish)}</span></div>
+    <div class="price-row"><span>Total BHI cost</span><span>${fmt(modelCost + BHI_FIXED_ADDONS + prefinish)}</span></div>
+    <div class="price-row"><span>After markup (${g('markup')||35.77}%)</span><span>${fmt(withMarkup)}</span></div>
+    <div class="price-row"><span>Tax (${g('taxRate')||7}%)</span><span>${fmt(taxAmt)}</span></div>
+    <div class="price-row"><span>Labor</span><span>${fmt(labor)}</span></div>
+    <div class="price-row total"><span>Line Total</span><span>${fmt(lineTotal)}</span></div>
+    <div class="match-note">${handing}${isManual ? ' · Manual entry' : ''}</div>
+  `;
+  box.classList.add('show');
+  updateTotals();
+}
+
+function removeDoor(id) { const el=document.getElementById('door-'+id); if(el) el.remove(); renumberDoors(); updateTotals(); }
+function renumberDoors() { document.querySelectorAll('#doorList .win-card').forEach((c,i)=>{ const l=c.querySelector('.win-label'); if(l) l.textContent='🚪 Door '+(i+1); }); }
+function duplicateDoor(id) {
+  addDoor({
+    model: g('d'+id+'-model'), manualcost: g('d'+id+'-manualcost'), manualdesc: g('d'+id+'-manualdesc'),
+    handing: g('d'+id+'-handing'), prefinish: g('d'+id+'-prefinish'), room: g('d'+id+'-room'), notes: g('d'+id+'-notes')
+  });
+  showToast('Door duplicated!');
+}
+
+function collectDoors() {
+  const doors = [];
+  for (let i = 1; i <= doorCount; i++) {
+    if (!document.getElementById('door-'+i)) continue;
+    doors.push({
+      model: g('d'+i+'-model'), manualcost: g('d'+i+'-manualcost'), manualdesc: g('d'+i+'-manualdesc'),
+      handing: g('d'+i+'-handing'), prefinish: g('d'+i+'-prefinish'), room: g('d'+i+'-room'), notes: g('d'+i+'-notes')
+    });
+  }
+  return doors;
 }
 
 function addWindow(data) {
@@ -1240,6 +1463,17 @@ function addWindow(data) {
       </div>
       <input type="text" id="w${id}-adderdesc" placeholder="Reason..." autocomplete="off" style="display:none;flex:1;min-height:44px;font-size:0.9rem;padding:0 14px;border:1.5px solid var(--border);border-radius:10px" id="w${id}-adderdesc">
     </div>
+    <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
+      <button onclick="toggleReinforcement(${id})" id="w${id}-reinbtn" style="min-height:44px;padding:0 16px;background:#eef0f8;color:#1a2a6c;border:1.5px solid #1a2a6c;border-radius:10px;font-size:0.85rem;font-weight:600;cursor:pointer;white-space:nowrap">+ Reinforcement</button>
+      <div class="settings-note" id="w${id}-reinnote" style="font-size:0.75rem;color:var(--muted)"></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;margin-top:8px" id="w${id}-woodrow">
+      <button onclick="toggleWood(${id})" style="min-height:44px;padding:0 16px;background:#f5f0e8;color:#5a3e00;border:1.5px solid #8a6a00;border-radius:10px;font-size:0.85rem;font-weight:600;cursor:pointer;white-space:nowrap">+ Wood Trim</button>
+      <div style="display:none;flex:1;flex-direction:column;gap:4px" id="w${id}-woodfield">
+        <input type="number" id="w${id}-woodlf" placeholder="LF (auto-calculated)" inputmode="decimal" step="0.01" oninput="updatePrice(${id})" style="width:100%;min-height:44px;font-size:1rem;padding:0 14px;border:1.5px solid #8a6a00;border-radius:10px">
+        <div class="settings-note" id="w${id}-woodnote" style="color:#5a3e00"></div>
+      </div>
+    </div>
     <div class="price-box" id="w${id}-pricebox"></div>
   `;
   document.getElementById('windowList').appendChild(div);
@@ -1261,6 +1495,8 @@ function addWindow(data) {
     if (data.miscdesc) set('w'+id+'-miscdesc', data.miscdesc);
     if (data.adder) { set('w'+id+'-adder', data.adder); set('w'+id+'-adderdesc', data.adderdesc||''); toggleAdder(id); }
     if (data.grid) { set('w'+id+'-grid', data.grid); toggleGrid(id); }
+    if (data.woodlf) { toggleWood(id); set('w'+id+'-woodlf', data.woodlf); }
+    if (data.reinforcement === '1') toggleReinforcement(id);
     if (data.glass) set('w'+id+'-glass', data.glass);
     if (data.framecolor) set('w'+id+'-framecolor', data.framecolor);
     if (data.screen) set('w'+id+'-screen', data.screen);
@@ -1273,6 +1509,69 @@ function addWindow(data) {
 }
 
 
+
+// Reinforcement PGT cost add-ons — markup & tax applied
+const REINFORCEMENT_COST = {
+  'SH5500': 34.59,   // max 52" wide
+  'HR5510': 127.04   // max 75" tall
+};
+
+function toggleReinforcement(id) {
+  const btn = document.getElementById('w'+id+'-reinbtn');
+  const note = document.getElementById('w'+id+'-reinnote');
+  const active = btn.dataset.active === '1';
+  btn.dataset.active = active ? '0' : '1';
+  btn.style.background = active ? '#eef0f8' : '#1a2a6c';
+  btn.style.color = active ? '#1a2a6c' : '#fff';
+  btn.textContent = active ? '+ Reinforcement' : '✓ Reinforcement';
+  if (note) note.textContent = active ? '' : 'PGT cost · markup & tax applied';
+  updatePrice(id);
+}
+
+function getReinforcement(id) {
+  const btn = document.getElementById('w'+id+'-reinbtn');
+  if (!btn || btn.dataset.active !== '1') return 0;
+  const type = g('w'+id+'-type');
+  return REINFORCEMENT_COST[type] || 0;
+}
+
+function toggleWood(id) {
+  const field = document.getElementById('w'+id+'-woodfield');
+  const btn = document.querySelector('#w'+id+'-woodrow button');
+  if (!field) return;
+  const showing = field.style.display !== 'none';
+  field.style.display = showing ? 'none' : 'flex';
+  if (btn) btn.textContent = showing ? '+ Wood Trim' : '✕ No Trim';
+  if (!showing) {
+    // Auto-calculate LF from window dimensions
+    autoFillWoodLF(id);
+  }
+  if (showing) { set('w'+id+'-woodlf',''); updatePrice(id); }
+}
+
+function autoFillWoodLF(id) {
+  const width = getDimValue('w'+id+'-width-sel','w'+id+'-width');
+  const height = getDimValue('w'+id+'-height-sel','w'+id+'-height');
+  const qty = parseInt(g('w'+id+'-qty'))||1;
+  const note = document.getElementById('w'+id+'-woodnote');
+  if (width && height) {
+    const lfEach = ((width/12)*2) + ((height/12)*2);
+    const lfTotal = lfEach * qty * 1.1;
+    set('w'+id+'-woodlf', lfTotal.toFixed(2));
+    if (note) note.textContent = `${width}" × ${height}" = ${lfEach.toFixed(2)} LF/window × ${qty} × 1.1 waste = ${lfTotal.toFixed(2)} LF`;
+    updatePrice(id);
+  }
+}
+
+function getWoodTotal(id) {
+  const field = document.getElementById('w'+id+'-woodfield');
+  if (!field || field.style.display === 'none') return 0;
+  const lf = parseFloat(g('w'+id+'-woodlf'))||0;
+  const costPerLF = parseFloat(g('woodCostPerLF'))||5.81;
+  const laborPerWin = parseFloat(g('woodLaborPerWin'))||100;
+  const qty = parseInt(g('w'+id+'-qty'))||1;
+  return (lf * costPerLF) + (laborPerWin * qty);
+}
 
 function toggleAdder(id) {
   const field = document.getElementById('w'+id+'-adderfield');
@@ -1343,9 +1642,9 @@ function collectData() {
   const wins=[];
   for(let i=1;i<=winCount;i++) {
     if(!document.getElementById('win-'+i)) continue;
-    wins.push({type:g('w'+i+'-type'),config:g('w'+i+'-config'),combounits:g('w'+i+'-combounits'),leg:g('w'+i+'-leg'),width:getDimValue('w'+i+'-width-sel','w'+i+'-width'),height:getDimValue('w'+i+'-height-sel','w'+i+'-height'),qty:g('w'+i+'-qty'),room:g('w'+i+'-room'),notes:g('w'+i+'-notes'),misccost:g('w'+i+'-misccost'),misclabor:g('w'+i+'-misclabor'),miscdesc:g('w'+i+'-miscdesc'),adder:g('w'+i+'-adder'),adderdesc:g('w'+i+'-adderdesc'),grid:g('w'+i+'-grid'),glass:g('w'+i+'-glass'),framecolor:g('w'+i+'-framecolor'),screen:g('w'+i+'-screen'),screenqty:g('w'+i+'-screenqty')});
+    wins.push({type:g('w'+i+'-type'),config:g('w'+i+'-config'),combounits:g('w'+i+'-combounits'),leg:g('w'+i+'-leg'),width:getDimValue('w'+i+'-width-sel','w'+i+'-width'),height:getDimValue('w'+i+'-height-sel','w'+i+'-height'),qty:g('w'+i+'-qty'),room:g('w'+i+'-room'),notes:g('w'+i+'-notes'),misccost:g('w'+i+'-misccost'),misclabor:g('w'+i+'-misclabor'),miscdesc:g('w'+i+'-miscdesc'),adder:g('w'+i+'-adder'),adderdesc:g('w'+i+'-adderdesc'),grid:g('w'+i+'-grid'),glass:g('w'+i+'-glass'),framecolor:g('w'+i+'-framecolor'),screen:g('w'+i+'-screen'),screenqty:g('w'+i+'-screenqty'),woodlf:g('w'+i+'-woodlf'),reinforcement:document.getElementById('w'+i+'-reinbtn')&&document.getElementById('w'+i+'-reinbtn').dataset.active==='1'?'1':''});
   }
-  return {jobNum:g('jobNum'),jobDate:g('jobDate'),custName:g('custName'),custPhone:g('custPhone'),custAddr:g('custAddr'),jobNotes:g('jobNotes'),installDate:g('installDate'),installDays:g('installDays'),markup:g('markup'),taxRate:g('taxRate'),labor:g('labor'),sgdLabor:g('sgdLabor'),fdLabor:g('fdLabor'),tolerance:g('tolerance'),permitCost:g('permitCost'),miscCost:g('miscCost'),screenCost:g('screenCost'),windows:wins,savedAt:new Date().toLocaleString()};
+  return {jobNum:g('jobNum'),jobDate:g('jobDate'),custName:g('custName'),custPhone:g('custPhone'),custAddr:g('custAddr'),jobNotes:g('jobNotes'),installDate:g('installDate'),installDays:g('installDays'),markup:g('markup'),taxRate:g('taxRate'),labor:g('labor'),sgdLabor:g('sgdLabor'),fdLabor:g('fdLabor'),tolerance:g('tolerance'),permitCost:g('permitCost'),miscCost:g('miscCost'),screenCost:g('screenCost'),windows:wins,doors:collectDoors(),savedAt:new Date().toLocaleString()};
 }
 
 function saveJob() { const d=collectData(); localStorage.setItem('est_'+(d.jobNum||Date.now()),JSON.stringify(d)); showToast('Estimate saved!'); }
@@ -1379,6 +1678,7 @@ function loadJob(key) {
   if(data.miscCost!==undefined) set('miscCost',data.miscCost);
   if(data.screenCost!==undefined) set('screenCost',data.screenCost);
   (data.windows||[]).forEach(w=>addWindow(w));
+  (data.doors||[]).forEach(d=>addDoor(d));
   closeOverlay(); showToast('Estimate loaded!'); window.scrollTo({top:0,behavior:'smooth'});
 }
 
@@ -1391,38 +1691,15 @@ function resetForm() {
   ['jobNum','jobDate','custName','custPhone','custAddr','jobNotes','installDays'].forEach(id=>set(id,''));
   // Keep installDate — it's a forecast that doesn't change per job
   document.getElementById('windowList').innerHTML='';
+  document.getElementById('doorList').innerHTML='';
   winCount=0;
+  doorCount=0;
   
 
 document.getElementById('installDays').addEventListener('input', function() {
   this.dataset.manual = this.value ? '1' : '';
 });
 
-function calcInstallDays() {
-  // Don't override if user manually set it
-  const field = document.getElementById('installDays');
-  if (field && field.dataset.manual === '1') return;
-  let windows = 0, doors = 0;
-  for (let i=1; i<=winCount; i++) {
-    if (!document.getElementById('win-'+i)) continue;
-    const type = g('w'+i+'-type');
-    if (!type) continue;
-    const qty = parseInt(g('w'+i+'-qty'))||1;
-    if (['SGD770NS','SGD5570NS','SGD5570','FD5555'].includes(type)) {
-      doors += qty;
-    } else if (['MULLBAR','MISC'].includes(type)) {
-      // don't count
-    } else {
-      windows += qty;
-    }
-  }
-  // 3-4 windows per day = use 3.5 average, round up
-  const windowDays = Math.ceil(windows / 3.5);
-  const doorDays = doors;
-  const total = Math.max(1, windowDays + doorDays);
-  set('installDays', total);
-  showToast(`Est. ${total} day${total>1?'s':''} — ${windows} window${windows!==1?'s':''}, ${doors} door${doors!==1?'s':''}`);
-}
 function checkPin() {
   const pin = document.getElementById('pinInput').value.trim();
   if (pin === '777') {
@@ -1487,9 +1764,9 @@ function emailJob() {
 
 function showToast(msg) { const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2500); }
 
-['markup','taxRate','labor','sgdLabor','fdLabor','tolerance','permitCost','miscCost','screenCost'].forEach(id=>{
+['markup','taxRate','labor','sgdLabor','fdLabor','tolerance','permitCost','miscCost','screenCost','pgtAdjust','woodCostPerLF','woodLaborPerWin'].forEach(id=>{
   const el = document.getElementById(id);
-  if(el) el.addEventListener('input',()=>{ for(let i=1;i<=winCount;i++){if(document.getElementById('win-'+i)) updatePrice(i);} });
+  if(el) el.addEventListener('input',()=>{ for(let i=1;i<=winCount;i++){if(document.getElementById('win-'+i)) updatePrice(i);} for(let i=1;i<=doorCount;i++){if(document.getElementById('door-'+i)) updateDoorPrice(i);} });
 });
 
 
@@ -1515,6 +1792,10 @@ function calcInstallDays() {
     } else {
       windows += qty;
     }
+  }
+  // BHI swing doors — 1 install day each
+  for (let i = 1; i <= doorCount; i++) {
+    if (document.getElementById('door-'+i) && g('d'+i+'-model')) doors++;
   }
   // 3-4 windows per day = use 3.5 average, round up
   const windowDays = Math.ceil(windows / 3.5);
@@ -1754,6 +2035,27 @@ function openReport(mode) {
     lineItems.push({...w, idx:i+1, pgtCost, lineMarkup, lineTax, lineLabor, lineScreen, lineAdder, lineTotal, matched, matchNote, qty});
   });
 
+  // BHI Door line items
+  const doorItems = [];
+  (data.doors||[]).forEach((d, i) => {
+    const modelKey = d.model;
+    if (!modelKey) return;
+    const entry = BHI_DOORS[modelKey];
+    if (!entry) return;
+    const modelCost = modelKey === 'BHI_MANUAL' ? (parseFloat(d.manualcost)||0) : entry.modelCost;
+    if (!modelCost) return;
+    const prefinish = parseFloat(d.prefinish)||424.50;
+    const totalBHI = applyPGTAdjust(modelCost + BHI_FIXED_ADDONS + prefinish);
+    const wm = totalBHI / (1 - markup);
+    const txAmt = wm * tax;
+    const labor = parseFloat(data.fdLabor)||1200;
+    const lineTotal = wm + txAmt + labor;
+    windowsSub += wm;
+    taxSub += txAmt;
+    laborSub += labor;
+    doorItems.push({ ...d, idx: lineItems.length + i + 1, modelCost, prefinish, totalBHI, wm, txAmt, labor, lineTotal, label: modelKey==='BHI_MANUAL' ? (d.manualdesc||'BHI Door') : entry.label });
+  });
+
   const grandTotal = windowsSub+taxSub+laborSub+permit+misc;
   const deposit = grandTotal*0.5;
   const balance = grandTotal*0.5;
@@ -1814,6 +2116,40 @@ function openReport(mode) {
       ${dealerCols}
     </tr>`;
 
+    return isDealer ? dealerRow : customerRow;
+  }).join('');
+
+  const doorRows = doorItems.map(d => {
+    const doorSVG = `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="100" viewBox="0 0 120 100"><rect x="20" y="5" width="80" height="90" fill="none" stroke="#8a3a00" stroke-width="3" rx="2"/><circle cx="75" cy="52" r="4" fill="#8a3a00"/><path d="M79,52 Q95,35 95,52" fill="none" stroke="#8a3a00" stroke-width="1.5" stroke-dasharray="4,2"/><text x="60" y="96" font-size="8" fill="#8a3a00" text-anchor="middle">SWING DOOR</text></svg>`;
+    const customerCols = `<td class="price-cell line-price-cell">${fmt(d.lineTotal)}</td>`;
+    const dealerCols = `
+      <td class="price-cell">${fmt(d.totalBHI)}</td>
+      <td class="price-cell">${fmt(d.wm)}</td>
+      <td class="price-cell">${fmt(d.txAmt)}</td>
+      <td class="price-cell">${fmt(d.labor)}</td>
+      <td></td><td></td>
+      <td class="price-cell total-cell">${fmt(d.lineTotal)}</td>`;
+    const customerRow = `<tr>
+      <td class="win-num">${d.idx}</td>
+      <td class="win-svg">${doorSVG}</td>
+      <td class="win-info">
+        <div style="font-size:0.78rem;font-weight:700;color:#8a3a00;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:3px">BHI DOOR</div>
+        <div class="win-type">${d.label}</div>
+        <div class="win-meta">${d.handing||''}${d.room?' · '+d.room:''}</div>
+        ${d.notes?`<div class="win-notes">Notes: ${d.notes}</div>`:''}
+      </td>
+      ${customerCols}
+    </tr>`;
+    const dealerRow = `<tr>
+      <td class="win-num">${d.idx}</td>
+      <td class="win-info" colspan="2">
+        <div style="font-weight:700;color:#8a3a00">BHI DOOR — ${d.label}</div>
+        <div class="win-size">Model: ${fmt(d.modelCost)} · Add-ons: ${fmt(BHI_FIXED_ADDONS)} · Prefinish: ${fmt(d.prefinish)} · Total BHI: ${fmt(d.totalBHI)}</div>
+        <div class="win-meta">${d.handing||''}${d.room?' · '+d.room:''}</div>
+        ${d.notes?`<div class="win-notes">${d.notes}</div>`:''}
+      </td>
+      ${dealerCols}
+    </tr>`;
     return isDealer ? dealerRow : customerRow;
   }).join('');
 
@@ -1994,7 +2330,7 @@ function openReport(mode) {
   </div>
   <table class="win-table">
     <thead><tr><th>#</th>${isDealer ? dealerHeader : '<th>Window</th><th>Description</th><th class="line-price-header">Price</th>'}</tr></thead>
-    <tbody>${winRows}</tbody>
+    <tbody>${winRows}${doorRows}</tbody>
   </table>
   ${totalsHTML}
   ${sigHTML}
