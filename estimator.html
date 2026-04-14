@@ -521,7 +521,7 @@ const priceList = {
 };
 
 const typeLabels = {
-  'SH5500':'Single Hung 5500','DH5560':'Double Hung 5560',
+  'SH5500':'Single Hung 5500',
   'HR5510':'Horizontal Roller 5510','PW5520':'Picture Window 5520',
   'AR5520':'Architectural 5520','FD5555':'French Door 5555',
   'SGD770NS':'Sliding Glass Door 770NS','SGD5570NS':'Sliding Glass Door 5570NS','SGD5570':'Sliding Glass Door 5570',
@@ -1463,7 +1463,7 @@ function addWindow(data) {
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr 60px;gap:8px">
       <div class="field"><label>Width</label>
-        <select id="w${id}-width-sel" onchange="dimSelChange('w${id}-width-sel','w${id}-width');updatePrice(${id})" style="min-height:44px;font-size:0.95rem;width:100%;margin-bottom:5px">
+        <select id="w${id}-width-sel" onchange="dimSelChange('w${id}-width-sel','w${id}-width');if(this.value&&this.value!=='custom'){var hid='w${id}-height-sel';setTimeout(function(){var h=document.getElementById(hid);if(h)h.focus();},50);}updatePrice(${id});" style="min-height:44px;font-size:0.95rem;width:100%;margin-bottom:5px">
           <option value="">-- common --</option>
           <option value="18.125">18.125"</option><option value="25.5">25.5"</option><option value="36">36"</option><option value="47">47"</option><option value="52.125">52.125"</option><option value="60">60"</option><option value="72">72"</option><option value="73">73"</option><option value="96">96"</option><option value="109">109"</option><option value="110">110"</option><option value="120">120"</option><option value="144">144"</option>
         </select>
@@ -2438,7 +2438,7 @@ function openReport(mode) {
 </div>
 <button class="back-btn" onclick="var tried=false;try{window.close();tried=true;}catch(e){}setTimeout(function(){if(!tried||!window.closed){document.getElementById('close-overlay').style.display='flex';}},200);">✕ Close</button>
 <button class="print-btn" onclick="window.print()">🖨 Print / Save PDF</button>
-<button id="toggleBtn" onclick="(function(){var cells=document.querySelectorAll('.line-price-cell');var header=document.querySelector('.line-price-header');var btn=document.getElementById('toggleBtn');var hidden=cells[0]&&cells[0].style.display==='none';cells.forEach(function(c){c.style.display=hidden?'':'none';});if(header)header.style.display=hidden?'':'none';btn.textContent=hidden?'Hide Line Prices':'Show Line Prices';})()" style="position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);background:#fff;color:#1a3a6c;border:2px solid #1a3a6c;padding:14px 24px;border-radius:999px;font-size:1rem;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.15);display:${isDealer?'none':'block'}">Hide Line Prices</button>
+<button id="toggleBtn" data-hidden="0" onclick="var h=this.dataset.hidden==='1';var cells=document.getElementsByClassName('line-price-cell');var hdr=document.getElementsByClassName('line-price-header');for(var i=0;i<cells.length;i++){cells[i].style.visibility=h?'':'hidden';}for(var j=0;j<hdr.length;j++){hdr[j].style.visibility=h?'':'hidden';}this.dataset.hidden=h?'0':'1';this.textContent=h?'Hide Line Prices':'Show Line Prices';" style="position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);background:#fff;color:#1a3a6c;border:2px solid #1a3a6c;padding:14px 24px;border-radius:999px;font-size:1rem;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.15);display:${isDealer?'none':'block'}">Hide Line Prices</button>
 <div id="close-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;align-items:center;justify-content:center;">
   <div style="background:#fff;border-radius:16px;padding:2rem;text-align:center;max-width:320px;box-shadow:0 8px 32px rgba(0,0,0,0.3);">
     <div style="font-size:1.1rem;font-weight:700;color:#1a3a6c;margin-bottom:0.75rem;">Done reviewing?</div>
