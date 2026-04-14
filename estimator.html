@@ -2420,7 +2420,7 @@ function openReport(mode) {
 <div class="page">
   ${companyHTML}
   <div class="report-title">${isDealer?'Dealer Cost Report':'Installation Proposal'}</div>
-  <div id="toggleWrap" style="text-align:center;margin-bottom:1rem;display:${isDealer?'none':'block'}"><button onclick="toggleLinePrices()" id="toggleBtn" style="padding:8px 20px;background:#1a3a6c;color:#fff;border:none;border-radius:20px;font-size:0.85rem;font-weight:600;cursor:pointer">Hide Line Prices</button></div>
+
   <div class="job-info">
     <div class="job-field"><label>Customer</label><span>${data.custName||'—'}</span></div>
     <div class="job-field"><label>Date</label><span>${data.jobDate||new Date().toLocaleDateString()}</span></div>
@@ -2436,19 +2436,16 @@ function openReport(mode) {
   ${totalsHTML}
   ${sigHTML}
 </div>
-<button class="back-btn" onclick="window.close();if(!window.closed){history.back();}">← Back</button>
+<button class="back-btn" onclick="var tried=false;try{window.close();tried=true;}catch(e){}setTimeout(function(){if(!tried||!window.closed){document.getElementById('close-overlay').style.display='flex';}},200);">✕ Close</button>
 <button class="print-btn" onclick="window.print()">🖨 Print / Save PDF</button>
-<scr'+'ipt>
-function toggleLinePrices() {
-  const cells = document.querySelectorAll('.line-price-cell');
-  const header = document.querySelector('.line-price-header');
-  const btn = document.getElementById('toggleBtn');
-  const isHidden = cells[0] && cells[0].style.display === 'none';
-  cells.forEach(c => c.style.display = isHidden ? '' : 'none');
-  if (header) header.style.display = isHidden ? '' : 'none';
-  if (btn) btn.textContent = isHidden ? 'Hide Line Prices' : 'Show Line Prices';
-}
-</scr'+'ipt>
+<button id="toggleBtn" onclick="(function(){var cells=document.querySelectorAll('.line-price-cell');var header=document.querySelector('.line-price-header');var btn=document.getElementById('toggleBtn');var hidden=cells[0]&&cells[0].style.display==='none';cells.forEach(function(c){c.style.display=hidden?'':'none';});if(header)header.style.display=hidden?'':'none';btn.textContent=hidden?'Hide Line Prices':'Show Line Prices';})()" style="position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);background:#fff;color:#1a3a6c;border:2px solid #1a3a6c;padding:14px 24px;border-radius:999px;font-size:1rem;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.15);display:${isDealer?'none':'block'}">Hide Line Prices</button>
+<div id="close-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:16px;padding:2rem;text-align:center;max-width:320px;box-shadow:0 8px 32px rgba(0,0,0,0.3);">
+    <div style="font-size:1.1rem;font-weight:700;color:#1a3a6c;margin-bottom:0.75rem;">Done reviewing?</div>
+    <div style="font-size:0.9rem;color:#555;margin-bottom:1.5rem;">Safari didn't allow auto-close. Please close this tab manually.</div>
+    <button onclick="document.getElementById('close-overlay').style.display='none'" style="padding:10px 24px;background:#1a3a6c;color:#fff;border:none;border-radius:999px;font-size:0.95rem;font-weight:700;cursor:pointer;">OK</button>
+  </div>
+</div>
 </body>
 </html>`;
 
