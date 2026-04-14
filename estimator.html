@@ -1463,7 +1463,7 @@ function addWindow(data) {
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr 60px;gap:8px">
       <div class="field"><label>Width</label>
-        <select id="w${id}-width-sel" onchange="dimSelChange('w${id}-width-sel','w${id}-width');if(this.value&&this.value!=='custom'){var hid='w${id}-height-sel';setTimeout(function(){var h=document.getElementById(hid);if(h)h.focus();},50);}updatePrice(${id});" style="min-height:44px;font-size:0.95rem;width:100%;margin-bottom:5px">
+        <select id="w${id}-width-sel" onchange="dimSelChange('w${id}-width-sel','w${id}-width');updatePrice(${id});if(this.value&&this.value!=='custom'){setTimeout(function(){var h=document.getElementById('w${id}-height-sel');if(!h)return;h.focus();try{h.click();}catch(e){}h.scrollIntoView({behavior:'smooth',block:'center'});h.style.outline='3px solid #e63946';setTimeout(function(){h.style.outline='';},1200);},80);}" style="min-height:44px;font-size:0.95rem;width:100%;margin-bottom:5px">
           <option value="">-- common --</option>
           <option value="18.125">18.125"</option><option value="25.5">25.5"</option><option value="36">36"</option><option value="47">47"</option><option value="52.125">52.125"</option><option value="60">60"</option><option value="72">72"</option><option value="73">73"</option><option value="96">96"</option><option value="109">109"</option><option value="110">110"</option><option value="120">120"</option><option value="144">144"</option>
         </select>
