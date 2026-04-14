@@ -428,14 +428,18 @@ const priceList = {
   ],
   // SGD770NS — config-based pricing
   'SGD770NS': [
-    // XX (2-panel)
+    // XX (2-panel) — bypass/standard
     {w:60,h:79,cfg:'XX',cost:2079.14},{w:72,h:79,cfg:'XX',cost:2297.26},{w:96,h:79,cfg:'XX',cost:2731.31},
     {w:109,h:79,cfg:'XX',cost:4101.23},{w:120,h:79,cfg:'XX',cost:4101.23},
     {w:60,h:96,cfg:'XX',cost:2429.59},{w:72,h:96,cfg:'XX',cost:2683.77},{w:96,h:96,cfg:'XX',cost:3192.79},
     {w:109,h:96,cfg:'XX',cost:4730.14},{w:120,h:96,cfg:'XX',cost:4730.14},
+    // XX h:95 — verified vs PGT quote 8804770
+    {w:105,h:95,cfg:'XX',cost:4306.65},
     // XXX (3-panel)
     {w:109,h:96,cfg:'XXX',cost:4306.65},{w:120,h:96,cfg:'XXX',cost:5105.64},
     {w:120,h:79,cfg:'XXX',cost:4329.71},{w:144,h:79,cfg:'XXX',cost:4329.71},{w:144,h:96,cfg:'XXX',cost:5105.64},
+    // XXX h:95 — verified vs PGT quote 8804770
+    {w:105,h:95,cfg:'XXX',cost:4306.65},{w:143,h:95,cfg:'XXX',cost:5105.64},
     // OXXO (4-panel)
     {w:120,h:79,cfg:'OXXO',cost:4423.34},{w:120,h:96,cfg:'OXXO',cost:5165.96},
     {w:144,h:79,cfg:'OXXO',cost:4875.92},{w:144,h:96,cfg:'OXXO',cost:5676.46},
@@ -456,6 +460,10 @@ const priceList = {
     {w:72,h:96,cfg:'XX-POCKET',cost:2902.82},
     {w:93.375,h:96,cfg:'XX-POCKET',cost:3426.14},{w:117.375,h:96,cfg:'XX-POCKET',cost:5006.07},
     {w:140.375,h:96,cfg:'XX-POCKET',cost:6709.53},
+    // XX-POCKET h:79 — verified vs PGT quote 8805859 (70 actual → 91.375 frame)
+    {w:91.375,h:79,cfg:'XX-POCKET',cost:2393.75},
+    // XX-POCKET h:95 — verified vs PGT quote 8804770 (70 actual → 91.375 frame)
+    {w:91.375,h:95,cfg:'XX-POCKET',cost:2902.82},
     {w:57.375,h:108,cfg:'XX-POCKET',cost:3412.61},{w:69.375,h:108,cfg:'XX-POCKET',cost:3828.42},
     {w:93.375,h:108,cfg:'XX-POCKET',cost:4661.43},{w:117.375,h:108,cfg:'XX-POCKET',cost:5836.62},
     {w:140.375,h:108,cfg:'XX-POCKET',cost:7431.49},
@@ -469,6 +477,10 @@ const priceList = {
     {w:85.4375,h:96,cfg:'XXX-POCKET',cost:4105.40},{w:103.4375,h:96,cfg:'XXX-POCKET',cost:4463.89},
     {w:139.4375,h:96,cfg:'XXX-POCKET',cost:5264.89},{w:175.4375,h:96,cfg:'XXX-POCKET',cost:7651.87},
     {w:209.4375,h:96,cfg:'XXX-POCKET',cost:10153.48},
+    // XXX-POCKET h:79 — verified vs PGT quote 8805859 (105 actual → 124.4375 frame)
+    {w:124.4375,h:79,cfg:'XXX-POCKET',cost:3730.17},
+    // XXX-POCKET h:95 — verified vs PGT quote 8804770 (105 actual → 124.4375 frame)
+    {w:124.4375,h:95,cfg:'XXX-POCKET',cost:4463.89},
     {w:85.4375,h:120,cfg:'XXX-POCKET',cost:5714.87},{w:103.4375,h:120,cfg:'XXX-POCKET',cost:6357.81},
     {w:139.4375,h:120,cfg:'XXX-POCKET',cost:7758.30},{w:175.4375,h:120,cfg:'XXX-POCKET',cost:9930.63},
     {w:209.4375,h:120,cfg:'XXX-POCKET',cost:12839.50}
@@ -1465,7 +1477,7 @@ function addWindow(data) {
       <div class="field"><label>Width</label>
         <select id="w${id}-width-sel" onchange="dimSelChange('w${id}-width-sel','w${id}-width');updatePrice(${id});if(this.value&&this.value!=='custom'){setTimeout(function(){var h=document.getElementById('w${id}-height-sel');if(!h)return;h.focus();try{h.click();}catch(e){}h.scrollIntoView({behavior:'smooth',block:'center'});h.style.outline='3px solid #e63946';setTimeout(function(){h.style.outline='';},1200);},80);}" style="min-height:44px;font-size:0.95rem;width:100%;margin-bottom:5px">
           <option value="">-- common --</option>
-          <option value="18.125">18.125"</option><option value="25.5">25.5"</option><option value="36">36"</option><option value="47">47"</option><option value="52.125">52.125"</option><option value="60">60"</option><option value="72">72"</option><option value="73">73"</option><option value="96">96"</option><option value="109">109"</option><option value="110">110"</option><option value="120">120"</option><option value="144">144"</option>
+          <option value="18.125">18.125"</option><option value="25.5">25.5"</option><option value="36">36"</option><option value="47">47"</option><option value="52.125">52.125"</option><option value="60">60"</option><option value="72">72"</option><option value="73">73"</option><option value="96">96"</option><option value="105">105"</option><option value="109">109"</option><option value="110">110"</option><option value="120">120"</option><option value="143">143"</option><option value="144">144"</option>
         </select>
         <div class="mic-row">
           <input type="number" id="w${id}-width" placeholder='W"' inputmode="decimal" step="0.125" style="flex:1;min-height:50px;font-size:1.1rem;font-weight:700;padding:0 10px;border:2px solid var(--blue);border-radius:10px" oninput="updatePrice(${id})">
@@ -1475,7 +1487,7 @@ function addWindow(data) {
       <div class="field"><label>Height</label>
         <select id="w${id}-height-sel" onchange="dimSelChange('w${id}-height-sel','w${id}-height');updatePrice(${id})" style="min-height:44px;font-size:0.95rem;width:100%;margin-bottom:5px">
           <option value="">-- common --</option>
-          <option value="25">25"</option><option value="37">37"</option><option value="49">49"</option><option value="49.5">49.5"</option><option value="62">62"</option><option value="75">75"</option><option value="79">79"</option><option value="95">95"</option>
+          <option value="25">25"</option><option value="37">37"</option><option value="49">49"</option><option value="49.5">49.5"</option><option value="62">62"</option><option value="75">75"</option><option value="79">79"</option><option value="95">95"</option><option value="96">96"</option>
         </select>
         <div class="mic-row">
           <input type="number" id="w${id}-height" placeholder='H"' inputmode="decimal" step="0.125" style="flex:1;min-height:50px;font-size:1.1rem;font-weight:700;padding:0 10px;border:2px solid var(--blue);border-radius:10px" oninput="updatePrice(${id})">
