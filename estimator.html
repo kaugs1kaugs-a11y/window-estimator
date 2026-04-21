@@ -2092,10 +2092,19 @@ function openReport(mode) {
     let pgtCost=0, lineMarkup=0, lineTax=0, lineLabor=0, lineScreen=0, lineAdder=parseFloat(w.adder)||0;
     let matchNote='', matched=false;
 
+    function reportLineMath(unitCost, qty) {
+      const sp = calcWindowPrice(unitCost);
+      return {
+        pgtCost: unitCost * qty,
+        lineMarkup: (sp.withMarkup - unitCost) * qty,
+        lineTax: sp.tax * qty
+      };
+    }
+
     if (type==='MISC') {
-      pgtCost = (parseFloat(w.misccost)||0)*qty;
-      lineMarkup = pgtCost*markup;
-      lineTax = (pgtCost+lineMarkup)*tax;
+      const miscUnit = parseFloat(w.misccost)||0;
+      const m = reportLineMath(miscUnit, qty);
+      pgtCost=m.pgtCost; lineMarkup=m.lineMarkup; lineTax=m.lineTax;
       lineLabor = (parseFloat(w.misclabor)||0)*qty;
       matched = pgtCost>0;
     } else if (COMBO_TYPES.includes(type)) {
@@ -2107,49 +2116,45 @@ function openReport(mode) {
       if (unitMatch) {
         const mullCost = mullMatch?mullMatch.cost:91.30;
         const totalPGT = (unitMatch.cost*units)+(mullCost*(units-1));
-        pgtCost = totalPGT;
-        lineMarkup = pgtCost*markup;
-        lineTax = (pgtCost+lineMarkup)*tax;
+        const m = reportLineMath(totalPGT, qty);
+        pgtCost=m.pgtCost; lineMarkup=m.lineMarkup; lineTax=m.lineTax;
         lineLabor = (parseFloat(data.labor)||487)*units*qty;
         matched=true; matchNote=`${units} units @ ${unitMatch.matchW}"×${unitMatch.matchH}"`;
       }
     } else if (MULL_TYPES.includes(type)) {
       const mullMatch = findPrice('MULL',0,height,null);
       if (mullMatch) {
-        pgtCost = mullMatch.cost*qty;
-        lineMarkup = pgtCost*markup;
-        lineTax = (pgtCost+lineMarkup)*tax;
+        const m = reportLineMath(mullMatch.cost, qty);
+        pgtCost=m.pgtCost; lineMarkup=m.lineMarkup; lineTax=m.lineTax;
         matched=true;
       }
     } else if (AR_TYPES.includes(type)) {
       const leg = parseFloat(w.leg)||0;
       const arMatch = findARPrice(type,width,height,leg);
       if (arMatch) {
-        pgtCost = arMatch.cost*qty;
-        lineMarkup = pgtCost*markup;
-        lineTax = (pgtCost+lineMarkup)*tax;
+        const m = reportLineMath(arMatch.cost, qty);
+        pgtCost=m.pgtCost; lineMarkup=m.lineMarkup; lineTax=m.lineTax;
         lineLabor = (parseFloat(data.labor)||487)*qty;
         matched=true;
       }
     } else {
       const match = findPrice(type,width,height,cfg);
       if (match) {
-        pgtCost = match.cost*qty;
-        lineMarkup = pgtCost*markup;
-        lineTax = (pgtCost+lineMarkup)*tax;
+        const m = reportLineMath(match.cost, qty);
+        pgtCost=m.pgtCost; lineMarkup=m.lineMarkup; lineTax=m.lineTax;
         lineLabor = getLaborCost(type,cfg,qty);
         matched=true; matchNote=`${match.matchW}"×${match.matchH}"`;
-        // Screen
         if (w.screen==='Box Screen') {
           const scrQty=parseInt(w.screenqty)||1;
-          const sp = calcWindowPrice(screenCostSetting*scrQty);
-          lineScreen = sp.withMarkup + sp.tax;
+          const scrSp = calcWindowPrice(screenCostSetting*scrQty);
+          lineScreen = scrSp.withMarkup + scrSp.tax;
         }
       }
     }
 
-    const lineTotal = lineMarkup + pgtCost + lineTax + lineLabor + lineScreen + lineAdder;
-    windowsSub += pgtCost+lineMarkup;
+    const lineSell = pgtCost + lineMarkup;
+    const lineTotal = lineSell + lineTax + lineLabor + lineScreen + lineAdder;
+    windowsSub += lineSell;
     taxSub += lineTax;
     laborSub += lineLabor+lineScreen+lineAdder;
 
