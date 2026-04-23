@@ -151,6 +151,11 @@
     <input type="number" id="pgtAdjust" value="0" inputmode="decimal" step="0.1" onchange="recalcAll()">
     <div class="settings-note">0 = current prices · 5 = 5% increase · applies to all PGT product costs</div>
   </div>
+  <div class="field">
+    <label>SGD Cost Adjustment %</label>
+    <input type="number" id="sgdAdjust" value="0" inputmode="decimal" step="0.1" onchange="recalcAll()">
+    <div class="settings-note">Additional adjustment for sliding glass doors only · stacks with PGT adjustment above</div>
+  </div>
   <div class="divider"></div>
   <div class="row2">
     <div class="field">
@@ -657,14 +662,16 @@ function getLaborCost(type, cfg, qty) {
   return (parseFloat(g('labor')) || 487) * qty;
 }
 
-function applyPGTAdjust(cost) {
+function applyPGTAdjust(cost, type) {
   const adj = parseFloat(g('pgtAdjust')) || 0;
-  if (!adj) return cost;
-  return cost * (1 + adj / 100);
+  const sgdAdj = (type && SGD_TYPES.includes(type)) ? (parseFloat(g('sgdAdjust')) || 0) : 0;
+  const total = adj + sgdAdj;
+  if (!total) return cost;
+  return cost * (1 + total / 100);
 }
 
-function calcWindowPrice(cost) {
-  cost = applyPGTAdjust(cost);
+function calcWindowPrice(cost, type) {
+  cost = applyPGTAdjust(cost, type);
   const markup = parseFloat(g('markup')) / 100 || 0.3577;
   const tax = parseFloat(g('taxRate')) / 100 || 0.07;
   const withMarkup = cost / (1 - markup);
@@ -1024,7 +1031,7 @@ function updatePrice(id) {
 
   const frameColor = g('w'+id+'-framecolor');
   const colorDelta = findColorDelta(type, width, height, frameColor);
-  const p = calcWindowPrice(match.cost);
+  const p = calcWindowPrice(match.cost, type);
   const colorP = colorDelta ? calcWindowPrice(colorDelta * qty) : null;
   const colorTotal = colorP ? colorP.withMarkup + colorP.tax : 0;
   const labor = getLaborCost(type, cfg, qty);
@@ -1168,7 +1175,7 @@ function updateTotals() {
     if (type === 'PW5520') {
       const result = findPW5520Price(parseFloat(width), parseFloat(height));
       if (!result) continue;
-      const p = calcWindowPrice(result.cost);
+      const p = calcWindowPrice(result.cost, type);
       productCostTotal += result.cost*qty;
       windowsTotal += p.withMarkup*qty;
       taxTotal += p.tax*qty;
@@ -1182,7 +1189,7 @@ function updateTotals() {
     if (!match) {
       continue;
     }
-    const p = calcWindowPrice(match.cost);
+    const p = calcWindowPrice(match.cost, type);
     productCostTotal += match.cost*qty;
     windowsTotal += p.withMarkup*qty;
     taxTotal += p.tax*qty;
@@ -1885,7 +1892,7 @@ function emailJob() {
 
 function showToast(msg) { const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2500); }
 
-['markup','taxRate','labor','sgdLabor','fdLabor','tolerance','permitCost','miscCost','screenCost','pgtAdjust','woodCostPerLF','woodLaborPerWin'].forEach(id=>{
+['markup','taxRate','labor','sgdLabor','fdLabor','tolerance','permitCost','miscCost','screenCost','pgtAdjust','sgdAdjust','woodCostPerLF','woodLaborPerWin'].forEach(id=>{
   const el = document.getElementById(id);
   if(el) el.addEventListener('input',()=>{ for(let i=1;i<=winCount;i++){if(document.getElementById('win-'+i)) updatePrice(i);} for(let i=1;i<=doorCount;i++){if(document.getElementById('door-'+i)) updateDoorPrice(i);} });
 });
@@ -2092,8 +2099,8 @@ function openReport(mode) {
     let pgtCost=0, lineMarkup=0, lineTax=0, lineLabor=0, lineScreen=0, lineAdder=parseFloat(w.adder)||0;
     let matchNote='', matched=false;
 
-    function reportLineMath(unitCost, qty) {
-      const sp = calcWindowPrice(unitCost);
+    function reportLineMath(unitCost, qty, type) {
+      const sp = calcWindowPrice(unitCost, type);
       return {
         pgtCost: unitCost * qty,
         lineMarkup: (sp.withMarkup - unitCost) * qty,
@@ -2103,7 +2110,7 @@ function openReport(mode) {
 
     if (type==='MISC') {
       const miscUnit = parseFloat(w.misccost)||0;
-      const m = reportLineMath(miscUnit, qty);
+      const m = reportLineMath(miscUnit, qty, type);
       pgtCost=m.pgtCost; lineMarkup=m.lineMarkup; lineTax=m.lineTax;
       lineLabor = (parseFloat(w.misclabor)||0)*qty;
       matched = pgtCost>0;
@@ -2116,7 +2123,7 @@ function openReport(mode) {
       if (unitMatch) {
         const mullCost = mullMatch?mullMatch.cost:91.30;
         const totalPGT = (unitMatch.cost*units)+(mullCost*(units-1));
-        const m = reportLineMath(totalPGT, qty);
+        const m = reportLineMath(totalPGT, qty, type);
         pgtCost=m.pgtCost; lineMarkup=m.lineMarkup; lineTax=m.lineTax;
         lineLabor = (parseFloat(data.labor)||487)*units*qty;
         matched=true; matchNote=`${units} units @ ${unitMatch.matchW}"×${unitMatch.matchH}"`;
@@ -2124,7 +2131,7 @@ function openReport(mode) {
     } else if (MULL_TYPES.includes(type)) {
       const mullMatch = findPrice('MULL',0,height,null);
       if (mullMatch) {
-        const m = reportLineMath(mullMatch.cost, qty);
+        const m = reportLineMath(mullMatch.cost, qty, type);
         pgtCost=m.pgtCost; lineMarkup=m.lineMarkup; lineTax=m.lineTax;
         matched=true;
       }
@@ -2132,7 +2139,7 @@ function openReport(mode) {
       const leg = parseFloat(w.leg)||0;
       const arMatch = findARPrice(type,width,height,leg);
       if (arMatch) {
-        const m = reportLineMath(arMatch.cost, qty);
+        const m = reportLineMath(arMatch.cost, qty, type);
         pgtCost=m.pgtCost; lineMarkup=m.lineMarkup; lineTax=m.lineTax;
         lineLabor = (parseFloat(data.labor)||487)*qty;
         matched=true;
@@ -2140,7 +2147,7 @@ function openReport(mode) {
     } else {
       const match = findPrice(type,width,height,cfg);
       if (match) {
-        const m = reportLineMath(match.cost, qty);
+        const m = reportLineMath(match.cost, qty, type);
         pgtCost=m.pgtCost; lineMarkup=m.lineMarkup; lineTax=m.lineTax;
         lineLabor = getLaborCost(type,cfg,qty);
         matched=true; matchNote=`${match.matchW}"×${match.matchH}"`;
