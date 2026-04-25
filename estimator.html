@@ -1221,7 +1221,7 @@ function updateTotals() {
     const modelCost = modelKey === 'BHI_MANUAL' ? (parseFloat(g('d'+i+'-manualcost'))||0) : entry.modelCost;
     if (!modelCost) continue;
     const prefinish = parseFloat(g('d'+i+'-prefinish'))||424.50;
-    const totalBHI = applyPGTAdjust(modelCost + BHI_FIXED_ADDONS + prefinish);
+    const totalBHI = applyPGTAdjust(modelCost + BHI_FIXED_ADDONS + prefinish, modelKey);
     const markup = parseFloat(g('markup'))/100||0.3577;
     const tax = parseFloat(g('taxRate'))/100||0.07;
     const wm = totalBHI / (1 - markup);
@@ -2141,8 +2141,16 @@ function openReport(mode) {
       if (arMatch) {
         const m = reportLineMath(arMatch.cost, qty, type);
         pgtCost=m.pgtCost; lineMarkup=m.lineMarkup; lineTax=m.lineTax;
-        lineLabor = (parseFloat(data.labor)||487)*qty;
+        lineLabor = (parseFloat(data.labor)||497.77)*qty;
         matched=true;
+      }
+    } else if (type === 'PW5520') {
+      const result = findPW5520Price(width, height);
+      if (result) {
+        const m = reportLineMath(result.cost, qty, type);
+        pgtCost=m.pgtCost; lineMarkup=m.lineMarkup; lineTax=m.lineTax;
+        lineLabor = getLaborCost(type, cfg, qty);
+        matched=true; matchNote=`W+H=${result.sum}"`;
       }
     } else {
       const match = findPrice(type,width,height,cfg);
@@ -2178,7 +2186,7 @@ function openReport(mode) {
     const modelCost = modelKey === 'BHI_MANUAL' ? (parseFloat(d.manualcost)||0) : entry.modelCost;
     if (!modelCost) return;
     const prefinish = parseFloat(d.prefinish)||424.50;
-    const totalBHI = applyPGTAdjust(modelCost + BHI_FIXED_ADDONS + prefinish);
+    const totalBHI = applyPGTAdjust(modelCost + BHI_FIXED_ADDONS + prefinish, modelKey);
     const wm = totalBHI / (1 - markup);
     const txAmt = wm * tax;
     const labor = parseFloat(data.fdLabor)||1200;
