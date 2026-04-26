@@ -209,6 +209,11 @@
   <button class="save-btn" onclick="saveJob()">Save Job</button>
   <button class="load-btn" onclick="openPanel()">Load Job</button>
 </div>
+<div class="action-row" style="margin-top:0.5rem">
+  <button class="save-btn" style="background:#2a5a2a;color:#fff;border-color:#2a5a2a" onclick="exportJob()">⬇ Export .json</button>
+  <button class="load-btn" style="background:#1a3a6c;color:#fff;border-color:#1a3a6c" onclick="document.getElementById('importFileInput').click()">⬆ Import .json</button>
+</div>
+<input type="file" id="importFileInput" accept=".json" style="display:none" onchange="importJob(event)">
 <button class="copy-btn" onclick="generateOutput()">Copy Estimate Summary</button>
 <div class="action-row" style="margin-top:0.75rem">
   <button class="save-btn" style="background:#1a3a6c;color:#fff;border-color:#1a3a6c" onclick="openReport('customer')">Customer Report</button>
@@ -1401,6 +1406,51 @@ function collectDoors() {
   return doors;
 }
 
+function buildTypeDropdownItems(id, filter) {
+  const dd = document.getElementById('w'+id+'-typedropdown');
+  if (!dd) return;
+  const q = (filter||'').toLowerCase();
+  const items = Object.entries(typeLabels)
+    .filter(([k,v]) => !q || v.toLowerCase().includes(q) || k.toLowerCase().includes(q))
+    .map(([k,v]) => `<div data-val="${k}" onmousedown="selectWindowType(${id},'${k}','${v.replace(/'/g,"&#39;")}')"
+      style="padding:10px 14px;cursor:pointer;font-size:0.97rem;border-bottom:1px solid #f0f0f0"
+      onmouseover="this.style.background='#f0f6ff'" onmouseout="this.style.background=''">${v}</div>`).join('');
+  dd.innerHTML = items || '<div style="padding:10px 14px;color:#999;font-size:0.9rem">No match</div>';
+}
+
+function showTypeDropdown(id) {
+  buildTypeDropdownItems(id, document.getElementById('w'+id+'-typesearch').value);
+  document.getElementById('w'+id+'-typedropdown').style.display = 'block';
+}
+
+function hideTypeDropdown(id) {
+  const dd = document.getElementById('w'+id+'-typedropdown');
+  if (dd) dd.style.display = 'none';
+}
+
+function filterTypeDropdown(id) {
+  buildTypeDropdownItems(id, document.getElementById('w'+id+'-typesearch').value);
+  document.getElementById('w'+id+'-typedropdown').style.display = 'block';
+}
+
+function selectWindowType(id, val, label) {
+  document.getElementById('w'+id+'-type').value = val;
+  document.getElementById('w'+id+'-typesearch').value = label;
+  hideTypeDropdown(id);
+  updatePrice(id);
+}
+
+function typeSearchKey(e, id) {
+  const dd = document.getElementById('w'+id+'-typedropdown');
+  if (!dd) return;
+  const items = dd.querySelectorAll('[data-val]');
+  if (e.key === 'Enter' && items.length > 0) {
+    const first = items[0];
+    selectWindowType(id, first.dataset.val, first.textContent);
+  }
+  if (e.key === 'Escape') hideTypeDropdown(id);
+}
+
 function addWindow(data) {
   winCount++;
   const id = winCount;
@@ -1418,10 +1468,16 @@ function addWindow(data) {
     </div>
     <div class="field">
       <label>Window Type</label>
-      <select id="w${id}-type" onchange="updatePrice(${id})">
-        <option value="">-- select type --</option>
-        ${typeOpts}
-      </select>
+      <div style="position:relative">
+        <input type="text" id="w${id}-typesearch" placeholder="Search type..." autocomplete="off"
+          style="width:100%;min-height:44px;padding:0 14px;border:1.5px solid var(--border);border-radius:10px;font-size:1rem;box-sizing:border-box"
+          oninput="filterTypeDropdown(${id})"
+          onfocus="showTypeDropdown(${id})"
+          onblur="setTimeout(()=>hideTypeDropdown(${id}),180)"
+          onkeydown="typeSearchKey(event,${id})">
+        <div id="w${id}-typedropdown" style="display:none;position:absolute;z-index:999;width:100%;max-height:240px;overflow-y:auto;background:#fff;border:1.5px solid var(--border);border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,0.12);margin-top:2px"></div>
+        <input type="hidden" id="w${id}-type" value="">
+      </div>
     </div>
     <div class="config-field" id="w${id}-configfield">
       <div class="field">
@@ -1570,6 +1626,7 @@ function addWindow(data) {
 
   if (data) {
     set('w'+id+'-type', data.type);
+    if (data.type && typeLabels[data.type]) { const ts = document.getElementById('w'+id+'-typesearch'); if(ts) ts.value = typeLabels[data.type]; }
     set('w'+id+'-width', data.width);
     set('w'+id+'-height', data.height);
     set('w'+id+'-qty', data.qty);
@@ -1777,6 +1834,38 @@ function collectData() {
 
 function saveJob() { const d=collectData(); localStorage.setItem('est_'+(d.jobNum||Date.now()),JSON.stringify(d)); showToast('Estimate saved!'); }
 
+function exportJob() {
+  const d = collectData();
+  const name = (d.custName||'estimate').replace(/[^a-z0-9]/gi,'_').toLowerCase();
+  const jobNum = d.jobNum || Date.now();
+  const blob = new Blob([JSON.stringify(d, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `mullets_${name}_${jobNum}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  showToast('Estimate exported!');
+}
+
+function importJob(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (!data.windows && !data.custName) { showToast('Invalid estimate file.'); return; }
+      localStorage.setItem('est_'+(data.jobNum||Date.now()), JSON.stringify(data));
+      loadJobData(data);
+      showToast('Estimate imported!');
+    } catch(err) {
+      showToast('Could not read file.');
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
 function getSaved() {
   const jobs=[];
   for(let i=0;i<localStorage.length;i++) { const k=localStorage.key(i); if(k&&k.startsWith('est_')) { try{jobs.push({key:k,data:JSON.parse(localStorage.getItem(k))});}catch(e){} } }
@@ -1791,9 +1880,7 @@ function openPanel() {
   document.getElementById('overlay').classList.add('show');
 }
 
-function loadJob(key) {
-  const raw=localStorage.getItem(key); if(!raw) return;
-  const data=JSON.parse(raw);
+function loadJobData(data) {
   resetForm();
   set('jobNum',data.jobNum); set('jobDate',data.jobDate); set('custName',data.custName); set('custPhone',data.custPhone); set('custAddr',data.custAddr);
   if(data.jobNotes) set('jobNotes',data.jobNotes);
@@ -1805,9 +1892,18 @@ function loadJob(key) {
   if(data.permitCost!==undefined) set('permitCost',data.permitCost);
   if(data.miscCost!==undefined) set('miscCost',data.miscCost);
   if(data.screenCost!==undefined) set('screenCost',data.screenCost);
+  if(data.pgtAdjust!==undefined) set('pgtAdjust',data.pgtAdjust);
+  if(data.sgdAdjust!==undefined) set('sgdAdjust',data.sgdAdjust);
   (data.windows||[]).forEach(w=>addWindow(w));
   (data.doors||[]).forEach(d=>addDoor(d));
-  closeOverlay(); showToast('Estimate loaded!'); window.scrollTo({top:0,behavior:'smooth'});
+  closeOverlay(); window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function loadJob(key) {
+  const raw=localStorage.getItem(key); if(!raw) return;
+  const data=JSON.parse(raw);
+  loadJobData(data);
+  showToast('Estimate loaded!');
 }
 
 function deleteJob(key) { if(!confirm('Delete this saved estimate?')) return; localStorage.removeItem(key); openPanel(); }
