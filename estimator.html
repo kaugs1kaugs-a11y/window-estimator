@@ -196,6 +196,9 @@
 
 <div class="totals-card" id="totalsCard">
   <div class="section-title">Estimate Total</div>
+  <div class="total-row" style="color:var(--muted);font-size:0.82rem"><span>Windows</span><span id="totWinCount">0</span></div>
+  <div class="total-row" style="color:var(--muted);font-size:0.82rem"><span>Doors</span><span id="totDoorCount">0</span></div>
+  <div class="divider" style="margin:0.5rem 0"></div>
   <div class="total-row" style="color:var(--muted);font-size:0.82rem"><span>Product cost (PGT)</span><span id="totProductCost">$0.00</span></div>
   <div class="total-row"><span>Windows subtotal</span><span id="totWindows">$0.00</span></div>
   <div class="total-row"><span>Tax</span><span id="totTax">$0.00</span></div>
@@ -594,6 +597,7 @@ const DH_DELTA = [
 ];
 
 function findDHDelta(width, height) {
+  if (height > 75) height = 84;
   const tol = 2;
   let best = null, bestDist = Infinity;
   for (const item of DH_DELTA) {
@@ -638,6 +642,8 @@ function normalizePocketWidth(width, cfg) {
 function findPrice(type, width, height, cfg) {
   const list = priceList[type];
   if (!list) return null;
+  // SH5500 & DH5560: heights above 75" use the 84" price (catalog caps at 84)
+  if ((type === 'SH5500' || type === 'DH5560') && height > 75) height = 84;
   const baseTol = parseFloat(g('tolerance')) || 2;
   const tol = (SGD_TYPES.includes(type)) ? Math.max(baseTol, 3) : baseTol;
   if (cfg && cfg.includes('POCKET')) width = normalizePocketWidth(width, cfg);
@@ -1105,6 +1111,7 @@ function recalcAll() {
 
 function updateTotals() {
   let windowsTotal=0, taxTotal=0, laborTotal=0, productCostTotal=0;
+  let totalWinUnits=0, totalDoorUnits=0;
   const margin = parseFloat(g('markup'))/100||0.3577;
   const tax = parseFloat(g('taxRate'))/100||0.07;
 
@@ -1112,6 +1119,7 @@ function updateTotals() {
     if (!document.getElementById('win-'+i)) continue;
     const type=g('w'+i+'-type'), width=getDimValue('w'+i+'-width-sel','w'+i+'-width'), height=getDimValue('w'+i+'-height-sel','w'+i+'-height');
     const qty=parseInt(g('w'+i+'-qty'))||1, cfg=g('w'+i+'-config');
+    if (type) totalWinUnits += qty;
     if (!type||!width||!height) continue;
     if ((isSGD(type)||FD_TYPES.includes(type)||type==='HR5510')&&!cfg) continue;
     if (MISC_ITEM_TYPES.includes(type)) {
@@ -1235,11 +1243,16 @@ function updateTotals() {
     windowsTotal += wm;
     taxTotal += txAmt;
     laborTotal += parseFloat(g('fdLabor'))||1200;
+    totalDoorUnits++;
   }
 
   const permit = parseFloat(g('permitCost'))||0;
   const misc = parseFloat(g('miscCost'))||0;
   calcInstallDays();
+  const winCountEl = document.getElementById('totWinCount');
+  const doorCountEl = document.getElementById('totDoorCount');
+  if (winCountEl) winCountEl.textContent = totalWinUnits;
+  if (doorCountEl) doorCountEl.textContent = totalDoorUnits;
   document.getElementById('totProductCost').textContent = fmt(productCostTotal);
   document.getElementById('totWindows').textContent = fmt(windowsTotal);
   document.getElementById('totTax').textContent = fmt(taxTotal);
@@ -1591,7 +1604,7 @@ function addWindow(data) {
       </div>
       <div class="field">
         <label>Frame Color</label>
-        <select id="w${id}-framecolor" onchange="updatePrice(${id})">
+        <select id="w${id}-framecolor" onchange="updatePrice(${id});if(${id}===1)syncFrameColor()">
           <option value="White">White</option>
           <option value="Bronze">Bronze</option>
           <option value="Bronze/White">Bronze/White</option>
@@ -1652,6 +1665,12 @@ function addWindow(data) {
     if (data.config) setTimeout(() => { set('w'+id+'-config', data.config); updatePrice(id); }, 50);
     else updatePrice(id);
   } else {
+    // Inherit frame color from window 1
+    const win1Color = document.getElementById('w1-framecolor');
+    if (win1Color && win1Color.value) {
+      const el = document.getElementById('w'+id+'-framecolor');
+      if (el) el.value = win1Color.value;
+    }
     div.scrollIntoView({behavior:'smooth',block:'start'});
   }
 }
@@ -2590,6 +2609,16 @@ function openReport(mode) {
   const blob = new Blob([html], {type:'text/html'});
   const url = URL.createObjectURL(blob);
   window.open(url, '_blank');
+}
+
+// SYNC FRAME COLOR — applies window 1 color to all other windows
+function syncFrameColor() {
+  const color = g('w1-framecolor');
+  if (!color) return;
+  for (let i = 2; i <= winCount; i++) {
+    const el = document.getElementById('w'+i+'-framecolor');
+    if (el) { el.value = color; updatePrice(i); }
+  }
 }
 
 // VOICE MEASUREMENT
