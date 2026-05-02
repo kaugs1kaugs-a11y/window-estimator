@@ -706,6 +706,34 @@ function findPW5520Price(width, height) {
   return tier ? { cost: tier.cost, sum: sum.toFixed(2) } : null;
 }
 
+// PW5520 Bronze/White color upcharge deltas — verified vs PGT quotes 8832977 (B/W) vs 8799976 (White)
+const PW5520_COLOR_DELTAS = [
+  {w:24,  h:24,   delta:62.50},  {w:24,  h:36,   delta:78.12},  {w:24,  h:48,   delta:93.74},
+  {w:36,  h:24,   delta:78.12},  {w:36,  h:36,   delta:93.74},  {w:36,  h:48,   delta:109.37},
+  {w:36,  h:62,   delta:127.60}, {w:52,  h:16,   delta:88.54},  {w:52,  h:24,   delta:98.95},
+  {w:52,  h:36,   delta:114.58}, {w:52,  h:48,   delta:130.20}, {w:60,  h:48,   delta:140.62},
+  {w:60,  h:62,   delta:158.84}, {w:72,  h:36,   delta:140.62}, {w:72,  h:48,   delta:156.24},
+  {w:72,  h:62,   delta:174.47}, {w:73,  h:36,   delta:141.92}, {w:73,  h:48,   delta:157.54},
+  {w:73,  h:49.5, delta:159.49}, {w:73,  h:62,   delta:175.77}, {w:80,  h:59,   delta:180.98},
+  {w:83,  h:72,   delta:422.03}, {w:84,  h:62,   delta:410.31}, {w:84,  h:70,   delta:420.73},
+  {w:96,  h:24,   delta:267.84}, {w:96,  h:38,   delta:174.47}, {w:96,  h:49,   delta:409.01},
+  {w:96,  h:62,   delta:205.72}
+];
+
+function findPW5520ColorDelta(width, height, color) {
+  if (color !== 'Bronze/White') return null;
+  const tol = 3;
+  let best = null, bestDist = Infinity;
+  for (const item of PW5520_COLOR_DELTAS) {
+    const dw = Math.abs(item.w - width);
+    const dh = Math.abs(item.h - height);
+    if (dw > tol || dh > tol) continue;
+    const dist = dw + dh;
+    if (dist < bestDist) { bestDist = dist; best = item; }
+  }
+  return best ? best.delta : null;
+}
+
 // AR5520 Half Circle pricing — WHITE baseline, verified vs PGT quotes 8797516 & 8802057
 // Indexed by width; H = W/2 always. Tolerance-matched on width.
 const AR5520_HC_LIST = [
@@ -1014,12 +1042,17 @@ function updatePrice(id) {
     const gridCost = parseFloat(g('w'+id+'-grid'))||0;
     const gridP = gridCost ? calcWindowPrice(gridCost*qty) : null;
     const gridTotal = gridP ? gridP.withMarkup + gridP.tax : 0;
-    const lineTotal = (p.withMarkup*qty) + (p.tax*qty) + (labor*qty) + adder + gridTotal;
+    const colorDelta = findPW5520ColorDelta(width, height, frameColor);
+    const colorP = colorDelta ? calcWindowPrice(colorDelta * qty) : null;
+    const colorTotal = colorP ? colorP.withMarkup + colorP.tax : 0;
+    const lineTotal = (p.withMarkup*qty) + (p.tax*qty) + (labor*qty) + adder + gridTotal + colorTotal;
     box.innerHTML = `
       <div class="price-row"><span>PGT cost (W+H = ${result.sum}")</span><span>${fmt(result.cost)}</span></div>
       <div class="price-row"><span>After markup (${g('markup')||35.77}%)</span><span>${fmt(p.withMarkup)}</span></div>
       <div class="price-row"><span>Tax (${g('taxRate')||7}%)</span><span>${fmt(p.tax)}</span></div>
       <div class="price-row"><span>Labor (${qty} × ${fmt(labor)})</span><span>${fmt(labor*qty)}</span></div>
+      ${colorP?`<div class="price-row"><span>Bronze/White upcharge (PGT)</span><span>${fmt(colorDelta)}</span></div>`:''}
+      ${colorP?`<div class="price-row"><span>B/W upcharge w/ markup & tax</span><span>${fmt(colorTotal)}</span></div>`:''}
       ${gridP?`<div class="price-row"><span>Grid w/ markup & tax</span><span>${fmt(gridTotal)}</span></div>`:''}
       ${adder?`<div class="price-row"><span>${adderDesc}</span><span>${fmt(adder)}</span></div>`:''}
       ${qty>1?`<div class="price-row"><span>× ${qty} windows</span><span></span></div>`:''}
@@ -1188,6 +1221,8 @@ function updateTotals() {
       laborTotal += parseFloat(g('w'+i+'-adder'))||0;
       const gridCostT = parseFloat(g('w'+i+'-grid'))||0;
       if (gridCostT) { const gp = calcWindowPrice(gridCostT*qty); productCostTotal += gridCostT*qty; windowsTotal += gp.withMarkup; taxTotal += gp.tax; }
+      const pwColorDelta = findPW5520ColorDelta(parseFloat(width), parseFloat(height), g('w'+i+'-framecolor'));
+      if (pwColorDelta) { const cp = calcWindowPrice(pwColorDelta*qty); productCostTotal += pwColorDelta*qty; windowsTotal += cp.withMarkup; taxTotal += cp.tax; }
       continue;
     }
     const match = findPrice(type,width,height,cfg);
@@ -1591,7 +1626,7 @@ function addWindow(data) {
       </div>
       <div class="field">
         <label>Frame Color</label>
-        <select id="w${id}-framecolor" onchange="updatePrice(${id});if(${id}===1)syncFrameColor()">
+        <select id="w${id}-framecolor" onchange="updatePrice(${id})">
           <option value="White">White</option>
           <option value="Bronze">Bronze</option>
           <option value="Bronze/White">Bronze/White</option>
@@ -1652,12 +1687,6 @@ function addWindow(data) {
     if (data.config) setTimeout(() => { set('w'+id+'-config', data.config); updatePrice(id); }, 50);
     else updatePrice(id);
   } else {
-    // Inherit frame color from window 1
-    const win1Color = document.getElementById('w1-framecolor');
-    if (win1Color && win1Color.value) {
-      const el = document.getElementById('w'+id+'-framecolor');
-      if (el) el.value = win1Color.value;
-    }
     div.scrollIntoView({behavior:'smooth',block:'start'});
   }
 }
@@ -2253,6 +2282,13 @@ function openReport(mode) {
         pgtCost=m.pgtCost; lineMarkup=m.lineMarkup; lineTax=m.lineTax;
         lineLabor = getLaborCost(type, cfg, qty);
         matched=true; matchNote=`W+H=${result.sum}"`;
+        const pwColorDelta = findPW5520ColorDelta(width, height, w.framecolor);
+        if (pwColorDelta) {
+          const cp = calcWindowPrice(pwColorDelta * qty);
+          pgtCost += pwColorDelta * qty;
+          lineMarkup += cp.withMarkup - pwColorDelta * qty;
+          lineTax += cp.tax;
+        }
       }
     } else {
       const match = findPrice(type,width,height,cfg);
@@ -2596,16 +2632,6 @@ function openReport(mode) {
   const blob = new Blob([html], {type:'text/html'});
   const url = URL.createObjectURL(blob);
   window.open(url, '_blank');
-}
-
-// SYNC FRAME COLOR — applies window 1 color to all other windows
-function syncFrameColor() {
-  const color = g('w1-framecolor');
-  if (!color) return;
-  for (let i = 2; i <= winCount; i++) {
-    const el = document.getElementById('w'+i+'-framecolor');
-    if (el) { el.value = color; updatePrice(i); }
-  }
 }
 
 // VOICE MEASUREMENT
