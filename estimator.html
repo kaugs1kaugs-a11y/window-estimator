@@ -196,9 +196,6 @@
 
 <div class="totals-card" id="totalsCard">
   <div class="section-title">Estimate Total</div>
-  <div class="total-row" style="color:var(--muted);font-size:0.82rem"><span>Windows</span><span id="totWinCount">0</span></div>
-  <div class="total-row" style="color:var(--muted);font-size:0.82rem"><span>Doors</span><span id="totDoorCount">0</span></div>
-  <div class="divider" style="margin:0.5rem 0"></div>
   <div class="total-row" style="color:var(--muted);font-size:0.82rem"><span>Product cost (PGT)</span><span id="totProductCost">$0.00</span></div>
   <div class="total-row"><span>Windows subtotal</span><span id="totWindows">$0.00</span></div>
   <div class="total-row"><span>Tax</span><span id="totTax">$0.00</span></div>
@@ -597,7 +594,6 @@ const DH_DELTA = [
 ];
 
 function findDHDelta(width, height) {
-  if (height > 75) height = 84;
   const tol = 2;
   let best = null, bestDist = Infinity;
   for (const item of DH_DELTA) {
@@ -642,8 +638,6 @@ function normalizePocketWidth(width, cfg) {
 function findPrice(type, width, height, cfg) {
   const list = priceList[type];
   if (!list) return null;
-  // SH5500 & DH5560: heights above 75" use the 84" price (catalog caps at 84)
-  if ((type === 'SH5500' || type === 'DH5560') && height > 75) height = 84;
   const baseTol = parseFloat(g('tolerance')) || 2;
   const tol = (SGD_TYPES.includes(type)) ? Math.max(baseTol, 3) : baseTol;
   if (cfg && cfg.includes('POCKET')) width = normalizePocketWidth(width, cfg);
@@ -1111,7 +1105,6 @@ function recalcAll() {
 
 function updateTotals() {
   let windowsTotal=0, taxTotal=0, laborTotal=0, productCostTotal=0;
-  let totalWinUnits=0, totalDoorUnits=0;
   const margin = parseFloat(g('markup'))/100||0.3577;
   const tax = parseFloat(g('taxRate'))/100||0.07;
 
@@ -1119,7 +1112,6 @@ function updateTotals() {
     if (!document.getElementById('win-'+i)) continue;
     const type=g('w'+i+'-type'), width=getDimValue('w'+i+'-width-sel','w'+i+'-width'), height=getDimValue('w'+i+'-height-sel','w'+i+'-height');
     const qty=parseInt(g('w'+i+'-qty'))||1, cfg=g('w'+i+'-config');
-    if (type) totalWinUnits += qty;
     if (!type||!width||!height) continue;
     if ((isSGD(type)||FD_TYPES.includes(type)||type==='HR5510')&&!cfg) continue;
     if (MISC_ITEM_TYPES.includes(type)) {
@@ -1243,16 +1235,11 @@ function updateTotals() {
     windowsTotal += wm;
     taxTotal += txAmt;
     laborTotal += parseFloat(g('fdLabor'))||1200;
-    totalDoorUnits++;
   }
 
   const permit = parseFloat(g('permitCost'))||0;
   const misc = parseFloat(g('miscCost'))||0;
   calcInstallDays();
-  const winCountEl = document.getElementById('totWinCount');
-  const doorCountEl = document.getElementById('totDoorCount');
-  if (winCountEl) winCountEl.textContent = totalWinUnits;
-  if (doorCountEl) doorCountEl.textContent = totalDoorUnits;
   document.getElementById('totProductCost').textContent = fmt(productCostTotal);
   document.getElementById('totWindows').textContent = fmt(windowsTotal);
   document.getElementById('totTax').textContent = fmt(taxTotal);
@@ -1329,7 +1316,7 @@ function addDoor(data) {
         <label>Room</label>
         <select id="d${id}-room">
           <option value="">-- room --</option>
-          <option value="Foyer/Entry">Foyer/Entry</option><option value="Living Room">Living Room</option><option value="Family Room">Family Room</option><option value="Dining Room">Dining Room</option><option value="Kitchen">Kitchen</option><option value="Main Bedroom">Main Bedroom</option><option value="Bedroom 2">Bedroom 2</option><option value="Bedroom 3">Bedroom 3</option><option value="Garage">Garage</option><option value="Lanai/Patio">Lanai/Patio</option><option value="Other">Other</option>
+          <option value="Foyer/Entry">Foyer/Entry</option><option value="Living Room">Living Room</option><option value="Dining Room">Dining Room</option><option value="Kitchen">Kitchen</option><option value="Main Bedroom">Main Bedroom</option><option value="Bedroom 2">Bedroom 2</option><option value="Bedroom 3">Bedroom 3</option><option value="Garage">Garage</option><option value="Lanai/Patio">Lanai/Patio</option><option value="Other">Other</option>
         </select>
       </div>
       <div class="field"><label>Notes</label><input type="text" id="d${id}-notes" placeholder="Notes..." autocomplete="off"></div>
@@ -1587,7 +1574,7 @@ function addWindow(data) {
         <label>Room</label>
         <select id="w${id}-room">
           <option value="">-- room --</option>
-          <option value="Living Room">Living Room</option><option value="Family Room">Family Room</option><option value="Dining Room">Dining Room</option><option value="Kitchen">Kitchen</option><option value="Main Bedroom">Main Bedroom</option><option value="Bedroom 2">Bedroom 2</option><option value="Bedroom 3">Bedroom 3</option><option value="Bedroom 4">Bedroom 4</option><option value="Main Bath">Main Bath</option><option value="Bathroom 2">Bathroom 2</option><option value="Bathroom 3">Bathroom 3</option><option value="Office">Office</option><option value="Laundry">Laundry</option><option value="Garage">Garage</option><option value="Lanai/Patio">Lanai/Patio</option><option value="Foyer/Entry">Foyer/Entry</option><option value="Hallway">Hallway</option><option value="Stairwell">Stairwell</option><option value="Bonus Room">Bonus Room</option><option value="Nook">Nook</option><option value="Other">Other</option>
+          <option value="Living Room">Living Room</option><option value="Dining Room">Dining Room</option><option value="Kitchen">Kitchen</option><option value="Main Bedroom">Main Bedroom</option><option value="Bedroom 2">Bedroom 2</option><option value="Bedroom 3">Bedroom 3</option><option value="Bedroom 4">Bedroom 4</option><option value="Main Bath">Main Bath</option><option value="Bathroom 2">Bathroom 2</option><option value="Bathroom 3">Bathroom 3</option><option value="Office">Office</option><option value="Laundry">Laundry</option><option value="Garage">Garage</option><option value="Lanai/Patio">Lanai/Patio</option><option value="Foyer/Entry">Foyer/Entry</option><option value="Hallway">Hallway</option><option value="Stairwell">Stairwell</option><option value="Bonus Room">Bonus Room</option><option value="Nook">Nook</option><option value="Other">Other</option>
         </select>
       </div>
       <div class="field"><label>Notes</label><input type="text" id="w${id}-notes" placeholder="Notes..." autocomplete="off"></div>
@@ -2411,17 +2398,9 @@ function openReport(mode) {
 
   const dealerHeader = isDealer ? `<th colspan="2">Window / Size</th><th>PGT Cost</th><th>w/ Markup</th><th>Tax</th><th>Labor</th><th>Screen</th><th>Add-on</th><th>Total</th>` : `<th class="line-price-header">Price</th>`;
 
-  const winUnitCount = lineItems.filter(w => w.matched || w.type==='MISC').reduce((s,w) => s+(parseInt(w.qty)||1), 0);
-  const doorUnitCount = doorItems.length;
-  const countSummary = [
-    winUnitCount ? `${winUnitCount} Window${winUnitCount!==1?'s':''}` : '',
-    doorUnitCount ? `${doorUnitCount} Door${doorUnitCount!==1?'s':''}` : ''
-  ].filter(Boolean).join(' · ');
-
   const totalsHTML = `
     <div class="totals-section">
       <table class="totals-table">
-        ${countSummary ? `<tr style="color:#555;font-size:0.88rem"><td>${countSummary}</td><td></td></tr>` : ''}
         ${isDealer?`
           <tr><td>Windows Subtotal</td><td>${fmt(windowsSub)}</td></tr>
           <tr><td>Tax</td><td>${fmt(taxSub)}</td></tr>
