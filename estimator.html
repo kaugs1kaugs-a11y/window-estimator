@@ -2411,9 +2411,17 @@ function openReport(mode) {
 
   const dealerHeader = isDealer ? `<th colspan="2">Window / Size</th><th>PGT Cost</th><th>w/ Markup</th><th>Tax</th><th>Labor</th><th>Screen</th><th>Add-on</th><th>Total</th>` : `<th class="line-price-header">Price</th>`;
 
+  const winUnitCount = lineItems.filter(w => w.matched || w.type==='MISC').reduce((s,w) => s+(parseInt(w.qty)||1), 0);
+  const doorUnitCount = doorItems.length;
+  const countSummary = [
+    winUnitCount ? `${winUnitCount} Window${winUnitCount!==1?'s':''}` : '',
+    doorUnitCount ? `${doorUnitCount} Door${doorUnitCount!==1?'s':''}` : ''
+  ].filter(Boolean).join(' · ');
+
   const totalsHTML = `
     <div class="totals-section">
       <table class="totals-table">
+        ${countSummary ? `<tr style="color:#555;font-size:0.88rem"><td>${countSummary}</td><td></td></tr>` : ''}
         ${isDealer?`
           <tr><td>Windows Subtotal</td><td>${fmt(windowsSub)}</td></tr>
           <tr><td>Tax</td><td>${fmt(taxSub)}</td></tr>
