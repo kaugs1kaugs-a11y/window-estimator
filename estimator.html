@@ -196,6 +196,9 @@
 
 <div class="totals-card" id="totalsCard">
   <div class="section-title">Estimate Total</div>
+  <div class="total-row" style="color:var(--muted);font-size:0.82rem"><span>Windows</span><span id="totWinCount">0</span></div>
+  <div class="total-row" style="color:var(--muted);font-size:0.82rem"><span>Doors</span><span id="totDoorCount">0</span></div>
+  <div class="divider" style="margin:0.4rem 0;border-top:1px solid var(--border)"></div>
   <div class="total-row" style="color:var(--muted);font-size:0.82rem"><span>Product cost (PGT)</span><span id="totProductCost">$0.00</span></div>
   <div class="total-row"><span>Windows subtotal</span><span id="totWindows">$0.00</span></div>
   <div class="total-row"><span>Tax</span><span id="totTax">$0.00</span></div>
@@ -1138,6 +1141,7 @@ function recalcAll() {
 
 function updateTotals() {
   let windowsTotal=0, taxTotal=0, laborTotal=0, productCostTotal=0;
+  let totalWinUnits=0, totalDoorUnits=0;
   const margin = parseFloat(g('markup'))/100||0.3577;
   const tax = parseFloat(g('taxRate'))/100||0.07;
 
@@ -1145,6 +1149,7 @@ function updateTotals() {
     if (!document.getElementById('win-'+i)) continue;
     const type=g('w'+i+'-type'), width=getDimValue('w'+i+'-width-sel','w'+i+'-width'), height=getDimValue('w'+i+'-height-sel','w'+i+'-height');
     const qty=parseInt(g('w'+i+'-qty'))||1, cfg=g('w'+i+'-config');
+    if (type) totalWinUnits += qty;
     if (!type||!width||!height) continue;
     if ((isSGD(type)||FD_TYPES.includes(type)||type==='HR5510')&&!cfg) continue;
     if (MISC_ITEM_TYPES.includes(type)) {
@@ -1270,11 +1275,16 @@ function updateTotals() {
     windowsTotal += wm;
     taxTotal += txAmt;
     laborTotal += parseFloat(g('fdLabor'))||1200;
+    totalDoorUnits++;
   }
 
   const permit = parseFloat(g('permitCost'))||0;
   const misc = parseFloat(g('miscCost'))||0;
   calcInstallDays();
+  const winCountEl = document.getElementById('totWinCount');
+  const doorCountEl = document.getElementById('totDoorCount');
+  if (winCountEl) winCountEl.textContent = totalWinUnits;
+  if (doorCountEl) doorCountEl.textContent = totalDoorUnits;
   document.getElementById('totProductCost').textContent = fmt(productCostTotal);
   document.getElementById('totWindows').textContent = fmt(windowsTotal);
   document.getElementById('totTax').textContent = fmt(taxTotal);
