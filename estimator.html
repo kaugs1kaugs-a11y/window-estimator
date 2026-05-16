@@ -2003,34 +2003,7 @@ function resetForm() {
   document.getElementById('doorList').innerHTML='';
   winCount=0;
   doorCount=0;
-  
-
-document.getElementById('installDays').addEventListener('input', function() {
-  this.dataset.manual = this.value ? '1' : '';
-});
-
-function checkPin() {
-  const pin = document.getElementById('pinInput').value.trim();
-  if (pin === '777') {
-    document.getElementById('lockScreen').style.display = 'none';
-    document.getElementById('appContent').style.display = 'block';
-    sessionStorage.setItem('estimator_unlocked','1');
-  } else {
-    const err = document.getElementById('pinError');
-    err.textContent = 'Incorrect PIN — try again';
-    document.getElementById('pinInput').value = '';
-    document.getElementById('pinInput').focus();
-    setTimeout(() => { err.textContent = ''; }, 2500);
-  }
-}
-
-// Check if already unlocked this session
-if (sessionStorage.getItem('estimator_unlocked') === '1') {
-  document.getElementById('lockScreen').style.display = 'none';
-  document.getElementById('appContent').style.display = 'block';
-}
-
-document.getElementById('jobDate').valueAsDate=new Date();
+  document.getElementById('jobDate').valueAsDate=new Date();
   updateTotals();
   addWindow();
 }
@@ -2079,11 +2052,6 @@ function showToast(msg) { const t=document.getElementById('toast'); t.textConten
 });
 
 
-
-document.getElementById('installDays').addEventListener('input', function() {
-  this.dataset.manual = this.value ? '1' : '';
-});
-
 function calcInstallDays() {
   // Don't override if user manually set it
   const field = document.getElementById('installDays');
@@ -2113,6 +2081,7 @@ function calcInstallDays() {
   set('installDays', total);
   showToast(`Est. ${total} day${total>1?'s':''} — ${windows} window${windows!==1?'s':''}, ${doors} door${doors!==1?'s':''}`);
 }
+
 function checkPin() {
   const pin = document.getElementById('pinInput').value.trim();
   if (pin === '777') {
@@ -2134,7 +2103,11 @@ if (sessionStorage.getItem('estimator_unlocked') === '1') {
   document.getElementById('appContent').style.display = 'block';
 }
 
-document.getElementById('jobDate').valueAsDate=new Date();
+document.getElementById('installDays').addEventListener('input', function() {
+  this.dataset.manual = this.value ? '1' : '';
+});
+
+document.getElementById('jobDate').valueAsDate = new Date();
 addWindow();
 
 function dimSelChange(selId, inputId) {
