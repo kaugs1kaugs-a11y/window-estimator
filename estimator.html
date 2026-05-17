@@ -1,0 +1,2734 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Window Estimator</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --blue: #1a6fc4; --blue-light: #e8f0fb;
+    --green: #1a8a4a; --green-light: #e8f5ed;
+    --red: #c0392b; --red-light: #fdecea;
+    --orange: #b85c00; --orange-light: #fff3e8;
+    --border: #d0d0d0; --text: #1a1a1a; --muted: #666;
+    --radius: 12px; --tap: 54px;
+  }
+  html { font-size: 17px; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #efefef; color: var(--text); padding-bottom: 4rem; }
+  header { background: var(--blue); color: #fff; padding: 1.1rem 1rem 1rem; }
+  header h1 { font-size: 1.2rem; font-weight: 600; }
+  header p { font-size: 0.8rem; opacity: 0.8; margin-top: 2px; }
+  .section { background: #fff; border-radius: var(--radius); margin: 1rem; padding: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.07); }
+  .section-title { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 0.9rem; }
+  .field { margin-bottom: 0.9rem; }
+  .field:last-child { margin-bottom: 0; }
+  label { display: block; font-size: 0.82rem; color: var(--muted); margin-bottom: 5px; font-weight: 500; }
+  input, select { width: 100%; min-height: var(--tap); font-size: 1rem; padding: 0 14px; border: 1.5px solid var(--border); border-radius: 10px; background: #fff; color: var(--text); appearance: none; -webkit-appearance: none; }
+  select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23666' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; }
+  input:focus, select:focus { outline: none; border-color: var(--blue); }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  .divider { height: 1px; background: var(--border); margin: 0.9rem 0; }
+  .win-card { background: #fff; border-radius: var(--radius); margin: 0 1rem 0.75rem; padding: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.07); border-left: 4px solid var(--blue); }
+  .win-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+  .win-label { font-size: 1rem; font-weight: 600; color: var(--blue); }
+  .del-btn { min-height: 44px; padding: 0 16px; border: 1.5px solid var(--red); background: var(--red-light); color: var(--red); border-radius: 10px; font-size: 0.85rem; font-weight: 600; cursor: pointer; }
+  .price-box { background: var(--green-light); border: 1.5px solid var(--green); border-radius: 10px; padding: 10px 14px; margin-top: 10px; display: none; }
+  .price-box.show { display: block; }
+  .price-row { display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 4px; color: var(--muted); }
+  .price-row.total { font-size: 1rem; font-weight: 700; color: var(--green); border-top: 1px solid var(--green); padding-top: 6px; margin-top: 6px; margin-bottom: 0; }
+  .price-nomatch { color: var(--red); font-size: 0.85rem; }
+  .match-note { font-size: 0.75rem; color: var(--muted); margin-top: 4px; font-style: italic; }
+  .config-field { display: none; }
+  .config-field.show { display: block; }
+  .totals-card { background: #fff; border-radius: var(--radius); margin: 0 1rem 1rem; padding: 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.07); border-left: 4px solid var(--green); }
+  .total-row { display: flex; justify-content: space-between; font-size: 0.9rem; margin-bottom: 8px; color: var(--muted); }
+  .total-row.grand { font-size: 1.2rem; font-weight: 700; color: var(--green); border-top: 1.5px solid var(--border); padding-top: 10px; margin-top: 4px; }
+  .add-btn { display: block; width: calc(100% - 2rem); margin: 0 1rem 0.75rem; min-height: 58px; background: var(--blue-light); color: var(--blue); border: 2px dashed var(--blue); border-radius: var(--radius); font-size: 1.05rem; font-weight: 600; cursor: pointer; }
+  .action-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 0.5rem 1rem 0; }
+  .save-btn { min-height: 56px; background: var(--green-light); color: var(--green); border: 1.5px solid var(--green); border-radius: var(--radius); font-size: 1rem; font-weight: 700; cursor: pointer; }
+  .load-btn { min-height: 56px; background: var(--orange-light); color: var(--orange); border: 1.5px solid var(--orange); border-radius: var(--radius); font-size: 1rem; font-weight: 700; cursor: pointer; }
+  .copy-btn { display: block; width: calc(100% - 2rem); margin: 0.75rem 1rem 0; min-height: 60px; background: var(--blue); color: #fff; border: none; border-radius: var(--radius); font-size: 1.1rem; font-weight: 700; cursor: pointer; }
+  .email-btn { display: block; width: calc(100% - 2rem); margin: 0.75rem 1rem 0; min-height: 56px; background: #fff8e8; color: #8a5a00; border: 1.5px solid #b87c00; border-radius: var(--radius); font-size: 1rem; font-weight: 700; cursor: pointer; }
+  .clear-btn { display: block; width: calc(100% - 2rem); margin: 0.75rem 1rem 0; min-height: 56px; background: var(--red-light); color: var(--red); border: 1.5px solid var(--red); border-radius: var(--radius); font-size: 1rem; font-weight: 700; cursor: pointer; }
+  .copy-btn:active,.save-btn:active,.load-btn:active,.clear-btn:active,.email-btn:active { opacity:0.8; transform:scale(0.98); }
+  .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; }
+  .overlay.show { display: flex; align-items: flex-end; }
+  .panel { background: #fff; border-radius: var(--radius) var(--radius) 0 0; width: 100%; max-height: 75vh; overflow-y: auto; padding: 1.25rem 1rem; }
+  .panel-title { font-size: 1rem; font-weight: 700; margin-bottom: 1rem; }
+  .saved-job { display: flex; justify-content: space-between; align-items: center; padding: 0.9rem 0; border-bottom: 1px solid var(--border); }
+  .saved-job:last-child { border-bottom: none; }
+  .saved-job-info { flex: 1; }
+  .saved-job-name { font-size: 0.95rem; font-weight: 600; }
+  .saved-job-meta { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
+  .saved-job-btns { display: flex; gap: 8px; margin-left: 10px; }
+  .load-job-btn { min-height: 44px; padding: 0 14px; background: var(--blue-light); color: var(--blue); border: 1.5px solid var(--blue); border-radius: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer; }
+  .del-job-btn { min-height: 44px; padding: 0 14px; background: var(--red-light); color: var(--red); border: 1.5px solid var(--red); border-radius: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer; }
+  .close-panel-btn { display: block; width: 100%; min-height: 52px; margin-top: 1rem; background: #efefef; color: var(--text); border: none; border-radius: var(--radius); font-size: 1rem; font-weight: 600; cursor: pointer; }
+  .no-jobs { text-align: center; color: var(--muted); padding: 2rem 0; font-size: 0.9rem; }
+  .toast { position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%); background: #1a1a1a; color: #fff; padding: 12px 24px; border-radius: 999px; font-size: 0.9rem; font-weight: 600; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 999; white-space: nowrap; }
+  .toast.show { opacity: 1; }
+  .settings-note { font-size: 0.78rem; color: var(--muted); margin-top: 4px; }
+  #lockScreen { position: fixed; inset: 0; background: var(--blue); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem; }
+  #lockScreen h2 { color: #fff; font-size: 1.4rem; margin-bottom: 0.5rem; }
+  #lockScreen p { color: rgba(255,255,255,0.7); font-size: 0.9rem; margin-bottom: 2rem; }
+  #pinInput { font-size: 2rem; text-align: center; letter-spacing: 0.5rem; width: 160px; min-height: 70px; border: none; border-radius: 14px; padding: 0 1rem; margin-bottom: 1rem; }
+  #pinInput:focus { outline: 3px solid #fff; }
+  #unlockBtn { width: 160px; min-height: 60px; background: #fff; color: var(--blue); border: none; border-radius: 14px; font-size: 1.1rem; font-weight: 700; cursor: pointer; }
+  #pinError { color: #ffcccc; font-size: 0.9rem; margin-top: 0.75rem; min-height: 1.2rem; }
+  #appContent { display: none; }
+  .mic-row { display: flex; gap: 8px; }
+  .mic-row input { flex: 1; }
+  .mic-btn { min-height: 36px; min-width: 36px; width: 36px; height: 36px; border-radius: 8px; border: 1.5px solid var(--border); background: #fff; font-size: 0.85rem; cursor: pointer; flex-shrink: 0; align-self: center; }
+  .mic-btn.listening { background: var(--red-light); border-color: var(--red); animation: pulse 1s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+</style>
+</head>
+<body>
+
+<div id="lockScreen">
+  <h2>🔒 Window Estimator</h2>
+  <p>Enter your PIN to continue</p>
+  <input type="password" id="pinInput" inputmode="numeric" maxlength="10" placeholder="···" onkeydown="if(event.key==='Enter') checkPin()">
+  <button id="unlockBtn" onclick="checkPin()">Unlock</button>
+  <div id="pinError"></div>
+</div>
+<div id="appContent">
+<header>
+  <h1>Window Estimator</h1>
+  <p>PGT pricing · 35.77% markup · 7% tax · $487 window / $771.77 SGD panel / $1,200 FD</p>
+</header>
+
+<div class="section">
+  <div class="section-title">Job Info</div>
+  <div class="row2">
+    <div class="field"><label>Job #</label><input type="text" id="jobNum" placeholder="8787788" inputmode="numeric"></div>
+    <div class="field"><label>Date</label><input type="date" id="jobDate"></div>
+  </div>
+  <div class="field"><label>Customer Name</label><input type="text" id="custName" placeholder="Last, First" autocomplete="off"></div>
+  <div class="field"><label>Phone</label><input type="tel" id="custPhone" placeholder="(941) 555-0000"></div>
+  <div class="field"><label>Address</label><input type="text" id="custAddr" placeholder="123 Main St, Parrish FL" autocomplete="off"></div>
+  <div class="row2">
+    <div class="field"><label>Tentative Install</label><input type="text" id="installDate" placeholder="e.g. June / July" autocomplete="off"></div>
+    <div class="field"><label>Install Days</label>
+      <input type="number" id="installDays" placeholder="auto" inputmode="numeric" min="1">
+      <div class="settings-note">Auto-calculated · override anytime</div>
+    </div>
+  </div>
+  <div class="field"><label>Job Notes / Scope</label><textarea id="jobNotes" placeholder="Scope of work, special instructions, access notes..." rows="3" style="width:100%;font-size:1rem;padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;font-family:inherit;resize:vertical"></textarea></div>
+</div>
+
+<div class="section">
+  <div class="section-title">Pricing Settings</div>
+  <div class="row2">
+    <div class="field"><label>Markup %</label><input type="number" id="markup" value="35.77" inputmode="decimal" step="0.01"></div>
+    <div class="field"><label>Tax %</label><input type="number" id="taxRate" value="7" inputmode="decimal" step="0.1"></div>
+  </div>
+  <div class="row2">
+    <div class="field">
+      <label>Window Labor $</label>
+      <input type="number" id="labor" value="497.77" inputmode="numeric">
+      <div class="settings-note">Per window</div>
+    </div>
+    <div class="field">
+      <label>SGD Labor $</label>
+      <input type="number" id="sgdLabor" value="771.77" inputmode="decimal" step="0.01">
+      <div class="settings-note">Per panel</div>
+    </div>
+    <div class="field">
+      <label>French Door Labor $</label>
+      <input type="number" id="fdLabor" value="1200" inputmode="numeric">
+      <div class="settings-note">Per door</div>
+    </div>
+  </div>
+  <div class="field">
+    <label>Size match tolerance (inches)</label>
+    <input type="number" id="tolerance" value="2" inputmode="decimal" step="0.5">
+  </div>
+  <div class="field">
+    <label>PGT Cost Adjustment %</label>
+    <input type="number" id="pgtAdjust" value="0" inputmode="decimal" step="0.1" onchange="recalcAll()">
+    <div class="settings-note">0 = current prices · 5 = 5% increase · applies to all PGT product costs</div>
+  </div>
+  <div class="field">
+    <label>SGD Cost Adjustment %</label>
+    <input type="number" id="sgdAdjust" value="0" inputmode="decimal" step="0.1" onchange="recalcAll()">
+    <div class="settings-note">Additional adjustment for sliding glass doors only · stacks with PGT adjustment above</div>
+  </div>
+  <div class="divider"></div>
+  <div class="row2">
+    <div class="field">
+      <label>Wood Trim $/LF</label>
+      <input type="number" id="woodCostPerLF" value="5.81" inputmode="decimal" step="0.01">
+      <div class="settings-note">Your charge per linear foot</div>
+    </div>
+    <div class="field">
+      <label>Wood Trim Labor $</label>
+      <input type="number" id="woodLaborPerWin" value="100" inputmode="numeric">
+      <div class="settings-note">Per window, flat add-on</div>
+    </div>
+  </div>
+  <div class="divider"></div>
+    <input type="number" id="screenCost" value="350" inputmode="numeric">
+    <div class="settings-note">Per screen, markup & tax applied</div>
+  </div>
+  <div class="row2">
+    <div class="field">
+      <label>Permit $</label>
+      <input type="number" id="permitCost" value="350" inputmode="numeric">
+      <div class="settings-note">Added to job total</div>
+    </div>
+    <div class="field">
+      <label>Misc Add-on $</label>
+      <input type="number" id="miscCost" value="0" inputmode="numeric">
+      <div class="settings-note">Extra costs</div>
+    </div>
+  </div>
+</div>
+
+<div id="windowList"></div>
+<div id="doorList"></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 1rem 0.75rem">
+  <button class="add-btn" style="margin:0;width:100%" onclick="addWindow()">+ Add Window</button>
+  <button class="add-btn" style="margin:0;width:100%;border-color:#8a3a00;color:#8a3a00;background:#fff3ee" onclick="addDoor()">+ Add BHI Door</button>
+</div>
+
+<div class="totals-card" id="totalsCard">
+  <div class="section-title">Estimate Total</div>
+  <div class="total-row" style="color:var(--muted);font-size:0.82rem"><span>Product cost (PGT)</span><span id="totProductCost">$0.00</span></div>
+  <div class="total-row"><span>Windows subtotal</span><span id="totWindows">$0.00</span></div>
+  <div class="total-row"><span>Tax</span><span id="totTax">$0.00</span></div>
+  <div class="total-row"><span>Labor</span><span id="totLabor">$0.00</span></div>
+  <div class="total-row"><span>Permit</span><span id="totPermit">$0.00</span></div>
+  <div class="total-row"><span>Misc</span><span id="totMisc">$0.00</span></div>
+  <div class="total-row grand"><span>Total</span><span id="totGrand">$0.00</span></div>
+</div>
+
+<div class="action-row">
+  <button class="save-btn" onclick="saveJob()">Save Job</button>
+  <button class="load-btn" onclick="openPanel()">Load Job</button>
+</div>
+<div class="action-row" style="margin-top:0.5rem">
+  <button class="save-btn" style="background:#2a5a2a;color:#fff;border-color:#2a5a2a" onclick="exportJob()">⬇ Export .json</button>
+  <button class="load-btn" style="background:#1a3a6c;color:#fff;border-color:#1a3a6c" onclick="document.getElementById('importFileInput').click()">⬆ Import .json</button>
+</div>
+<input type="file" id="importFileInput" accept=".json" style="display:none" onchange="importJob(event)">
+<button class="copy-btn" onclick="generateOutput()">Copy Estimate Summary</button>
+<div class="action-row" style="margin-top:0.75rem">
+  <button class="save-btn" style="background:#1a3a6c;color:#fff;border-color:#1a3a6c" onclick="openReport('customer')">Customer Report</button>
+  <button class="save-btn" style="background:#8a3a00;color:#fff;border-color:#8a3a00" onclick="openReport('dealer')">Dealer Report</button>
+</div>
+<button class="email-btn" onclick="emailJob()">Email Estimate</button>
+<button class="clear-btn" onclick="clearAll()">Clear / New Job</button>
+
+<div class="overlay" id="overlay" onclick="closePanelClick(event)">
+  <div class="panel">
+    <div class="panel-title">Saved Estimates</div>
+    <div id="savedList"></div>
+    <button class="close-panel-btn" onclick="closeOverlay()">Close</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let winCount = 0;
+
+// SGD panel counts per config
+const SGD_PANELS = { 'X': 1, 'XX': 2, 'XXX': 3, 'OXXO': 4 };
+
+// Configs available per type
+const TYPE_CONFIGS = {
+  'FD5555': ['X','XX'],
+  'HR5510': ['XO','OX','XOX'],
+  'SGD770NS': ['XX','XXX','OXXO','X-POCKET','XX-POCKET','XXX-POCKET'],
+  'SGD5570NS': ['XX','XXX','OXXO'],
+  'SGD5570': ['XX','XXX','OXXO']
+};
+
+// Is this an SGD type?
+const SGD_TYPES = ['SGD770NS','SGD5570NS','SGD5570'];
+// Is this a French Door?
+const FD_TYPES = ['FD5555'];
+// Is this a combo unit?
+const COMBO_TYPES = ['COMBO_SH5500'];
+// Is this a mull bar?
+const MULL_TYPES = ['MULLBAR'];
+// Is this a misc item?
+const MISC_ITEM_TYPES = ['MISC'];
+// Is this an AR5520?
+const AR_TYPES = ['AR5520_HC','AR5520_EB'];
+
+// Grid cost deltas — PGT add-on cost for standard grid (verified vs quotes 8801990 vs 8801972)
+const gridDeltaList = {
+  'SH5500': [
+    {w:18.125,h:25,delta:8.65},{w:18.125,h:37.375,delta:17.29},{w:18.125,h:49.625,delta:17.29},
+    {w:18.125,h:62,delta:17.29},{w:18.125,h:75,delta:17.29},{w:18.125,h:84,delta:25.94},
+    {w:25.5,h:25,delta:8.65},{w:25.5,h:37.375,delta:17.29},{w:25.5,h:49.625,delta:17.29},
+    {w:25.5,h:62,delta:17.29},{w:25.5,h:75,delta:17.29},{w:25.5,h:84,delta:25.94},
+    {w:36,h:25,delta:12.97},{w:36,h:37.375,delta:25.94},{w:36,h:49.625,delta:25.94},
+    {w:36,h:62,delta:25.94},{w:36,h:75,delta:25.94},{w:36,h:84,delta:38.91},
+    {w:52.125,h:25,delta:17.29},{w:52.125,h:37.375,delta:34.58},{w:52.125,h:49.625,delta:34.58},
+    {w:52.125,h:62,delta:34.58},{w:52.125,h:75,delta:34.58},{w:52.125,h:84,delta:51.88}
+  ],
+  'HR5510': [
+    {w:25.5,h:25,delta:8.73},{w:25.5,h:37.375,delta:13.10},{w:25.5,h:49.625,delta:17.47},{w:25.5,h:62,delta:17.47},
+    {w:36,h:25,delta:8.73},{w:36,h:37.375,delta:13.10},{w:36,h:49.625,delta:17.47},{w:36,h:62,delta:17.47},
+    {w:52.125,h:25,delta:8.73},{w:52.125,h:37.375,delta:13.10},{w:52.125,h:49.625,delta:17.47},{w:52.125,h:62,delta:17.47},
+    {w:73,h:25,delta:26.20},{w:73,h:37,delta:39.30},{w:73,h:49,delta:52.40},{w:73,h:62,delta:52.40},{w:73,h:75,delta:65.51}
+  ],
+  'FD5555': [
+    {w:36,h:79,delta:43.40},{w:36,h:96,delta:43.40},
+    {w:72,h:79,delta:86.80},{w:72,h:96,delta:86.80}
+  ]
+};
+
+// Bronze/White color upcharge deltas — verified vs PGT quotes 8801990 (B/W) vs priceList (White baseline)
+const colorDeltaList = {
+  'SH5500': [
+    // Updated from PGT quote (file 17) — verified B/W minus White
+    {w:18.125,h:25,delta:61.69},{w:18.125,h:37.375,delta:79.39},{w:18.125,h:49.625,delta:96.91},
+    {w:18.125,h:62,delta:114.61},{w:18.125,h:75,delta:133.21},{w:18.125,h:84,delta:146.08},
+    {w:25.5,h:25,delta:72.24},{w:25.5,h:37.375,delta:89.94},{w:25.5,h:49.625,delta:107.46},
+    {w:25.5,h:62,delta:125.16},{w:25.5,h:75,delta:143.76},{w:25.5,h:84,delta:156.63},
+    {w:36,h:25,delta:87.26},{w:36,h:37.375,delta:104.96},{w:36,h:49.625,delta:122.48},
+    {w:36,h:62,delta:140.18},{w:36,h:75,delta:158.78},{w:36,h:84,delta:171.65},
+    {w:52.125,h:25,delta:110.32},{w:52.125,h:37.375,delta:128.03},{w:52.125,h:49.625,delta:145.55},
+    {w:52.125,h:62,delta:163.25},{w:52.125,h:75,delta:181.84},{w:52.125,h:84,delta:194.72}
+  ],
+  'HR5510': [
+    // Updated from PGT quote (file 17) — verified B/W minus White
+    {w:25.5,h:25,delta:72.98},{w:25.5,h:37.375,delta:90.86},{w:25.5,h:49.625,delta:108.56},{w:25.5,h:62,delta:126.45},
+    {w:36,h:25,delta:88.15},{w:36,h:37.375,delta:106.04},{w:36,h:49.625,delta:123.74},{w:36,h:62,delta:141.62},
+    {w:52.125,h:25,delta:111.45},{w:52.125,h:37.375,delta:129.34},{w:52.125,h:49.625,delta:147.04},{w:52.125,h:62,delta:164.92},
+    {w:73,h:25,delta:141.62},{w:73,h:37,delta:158.97},{w:73,h:49,delta:176.31},{w:73,h:62,delta:195.10},{w:73,h:75,delta:213.88},
+    // XOX sizes — updated from PGT quote 8802033 (B/W) vs file 14 (White)
+    {w:105,h:37,delta:211.07},{w:105,h:49,delta:228.91},{w:105,h:62,delta:248.24},
+    {w:109,h:37,delta:217.02},{w:109,h:49,delta:234.86},{w:109,h:62,delta:254.18},
+    {w:110,h:25,delta:200.67},{w:110,h:37.375,delta:219.06},{w:110,h:49.625,delta:237.27},{w:110,h:62,delta:255.67},
+    {w:120,h:49,delta:251.21},{w:120,h:62,delta:270.53}
+  ],
+  'FD5555': [
+    // Updated — verified B/W ($2667.18) minus White ($2088.45) from file 17/18
+    {w:36,h:79,delta:578.73},{w:36,h:96,delta:578.73},
+    {w:72,h:79,delta:1157.46},{w:72,h:96,delta:1157.46}
+  ],
+  'AR5520_HC': [
+    // Updated +4.0%
+    {w:24,delta:48.22},{w:36,delta:72.33},{w:48,delta:96.45},{w:49,delta:98.46},
+    {w:52,delta:104.48},{w:60,delta:120.56},{w:70,delta:140.65},
+    {w:73,delta:146.68},{w:76,delta:152.7},{w:84,delta:168.78},
+    {w:96,delta:192.89}
+  ],
+  'AR5520_EB': [
+    // Updated +4.0%
+    {w:48,h:12,delta:80.37},{w:60,h:12,delta:96.45},
+    {w:73,h:12,delta:113.86},{w:84,h:12,delta:128.6},{w:96,h:12,delta:144.66},
+    {w:36,h:22,delta:77.69},{w:48,h:22,delta:93.77},
+    {w:52,h:22,delta:99.12},{w:84,h:22,delta:141.99},{w:96,h:22,delta:158.06}
+  ]
+};
+
+function findColorDelta(type, width, height, color) {
+  if (color !== 'Bronze/White') return null;
+  if (type === 'SGD770NS') return null; // SGD770NS has no Bronze/White option
+  const list = colorDeltaList[type];
+  if (!list) return null;
+  const tol = 2;
+  let best = null, bestDist = Infinity;
+  for (const item of list) {
+    const dw = Math.abs(item.w - width);
+    // HC entries have no h field — skip height check for those
+    const dh = item.h !== undefined ? Math.abs(item.h - height) : 0;
+    if (dw > tol || dh > tol) continue;
+    const dist = dw + dh;
+    if (dist < bestDist) { bestDist = dist; best = item; }
+  }
+  return best ? best.delta : null;
+}
+
+function findGridDelta(type, width, height) {
+  const list = gridDeltaList[type];
+  if (!list) return null;
+  const tol = 2;
+  let best = null, bestDist = Infinity;
+  for (const item of list) {
+    const dw = Math.abs(item.w - width);
+    const dh = Math.abs(item.h - height);
+    if (dw > tol || dh > tol) continue;
+    const dist = dw + dh;
+    if (dist < bestDist) { bestDist = dist; best = item; }
+  }
+  return best ? best.delta : null;
+}
+
+// Price list — SGDs include config field
+const priceList = {
+  'SH5500': [
+    // Updated from PGT quote 8797488 — +4.0% across the board
+    {w:18.125,h:25,cost:279.06},{w:18.125,h:37.375,cost:331.37},{w:18.125,h:49.625,cost:382.05},
+    {w:18.125,h:62,cost:433.14},{w:18.125,h:75,cost:488.72},{w:18.125,h:84,cost:527.55},
+    {w:25.5,h:25,cost:327.29},{w:25.5,h:37.375,cost:396.76},{w:25.5,h:49.625,cost:467.47},
+    {w:25.5,h:62,cost:540.64},{w:25.5,h:75,cost:624.41},{w:25.5,h:84,cost:682.04},
+    {w:36,h:25,cost:390.22},{w:36,h:37.375,cost:491.17},{w:36,h:49.625,cost:597.03},
+    {w:36,h:62,cost:699.61},{w:36,h:75,cost:805.46},{w:36,h:84,cost:885.98},
+    {w:52.125,h:25,cost:493.63},{w:52.125,h:37.375,cost:642.40},{w:52.125,h:49.625,cost:786.67},
+    {w:52.125,h:62,cost:931.76},{w:52.125,h:75,cost:1162.67},{w:52.125,h:84,cost:1416.48},
+    // w:54 — reinforcement baked in — updated vs PGT quote 8797488
+    {w:54,h:25,cost:726.58},{w:54,h:37.375,cost:950.97},{w:54,h:49.625,cost:1169.63},
+    {w:54,h:62,cost:1458.56},{w:54,h:75,cost:1767.14},{w:54,h:84,cost:2007.86}
+  ],
+  'DH5560': [
+    // Updated +4.0% — file 18 confirmed 36x62=$844.83 (+4.0%)
+    {w:18.125,h:25,cost:342.07},{w:18.125,h:37.375,cost:400.75},{w:18.125,h:49.625,cost:461.44},
+    {w:18.125,h:62,cost:522.11},{w:18.125,h:75,cost:585.55},{w:18.125,h:84,cost:630.59},
+    {w:25.5,h:25,cost:398.92},{w:25.5,h:37.375,cost:480.74},{w:25.5,h:49.625,cost:563.48},
+    {w:25.5,h:62,cost:648.07},{w:25.5,h:75,cost:754.71},{w:25.5,h:84,cost:816.31},
+    {w:36,h:25,cost:478.90},{w:36,h:37.375,cost:594.73},{w:36,h:49.625,cost:724.37},
+    {w:36,h:62,cost:844.80},{w:36,h:75,cost:968.92},{w:36,h:84,cost:1055.34},
+    {w:52.125,h:25,cost:603.01},{w:52.125,h:37.375,cost:781.37},{w:52.125,h:49.625,cost:950.53},
+    {w:52.125,h:62,cost:1121.54},{w:52.125,h:75,cost:1317.36},{w:52.125,h:84,cost:1769.68},
+    // w:54 — reinforcement baked in — updated +4.0%
+    {w:54,h:25,cost:1007.53},{w:54,h:37.375,cost:1283.34},{w:54,h:49.625,cost:1549.95},
+    {w:54,h:62,cost:1973.77},{w:54,h:75,cost:2271.66},{w:54,h:84,cost:2638.48}
+  ],
+  'HR5510': [
+    // XO / OX config (same price)
+    // h:16.25 — verified vs PGT quote 8802126 (no reinforcement)
+    // Updated from PGT quote 8797488 — +4.0% across the board
+    {w:36,h:16.25,cfg:'XO',cost:385.15},{w:37,h:16.25,cfg:'XO',cost:445.84},{w:52,h:16.25,cfg:'XO',cost:477.64},{w:73,h:16.25,cfg:'XO',cost:598.61},
+    {w:25.5,h:25,cfg:'XO',cost:322.38},{w:25.5,h:37.375,cfg:'XO',cost:403.32},{w:25.5,h:49.625,cfg:'XO',cost:483.42},{w:25.5,h:62,cfg:'XO',cost:563.52},
+    {w:36,h:25,cfg:'XO',cost:385.15},{w:36,h:37.375,cfg:'XO',cost:493.33},{w:36,h:49.625,cfg:'XO',cost:601.09},{w:36,h:62,cfg:'XO',cost:710.09},{w:36,h:75,cfg:'XO',cost:1611.87},
+    {w:52.125,h:25,cfg:'XO',cost:477.64},{w:52.125,h:37.375,cfg:'XO',cost:631.23},{w:52.125,h:49.625,cfg:'XO',cost:783.18},{w:52.125,h:62,cfg:'XO',cost:935.96},
+    {w:48,h:75,cfg:'XO',cost:1774.56},{w:52,h:75,cfg:'XO',cost:1774.56},
+    {w:73,h:25,cfg:'XO',cost:598.61},{w:73,h:37,cfg:'XO',cost:808.37},{w:73,h:49,cfg:'XO',cost:1016.47},{w:73,h:62,cfg:'XO',cost:1383.94},{w:73,h:75,cfg:'XO',cost:2618.11},
+    // OX same pricing as XO
+    {w:36,h:16.25,cfg:'OX',cost:385.15},{w:37,h:16.25,cfg:'OX',cost:445.84},{w:52,h:16.25,cfg:'OX',cost:477.64},{w:73,h:16.25,cfg:'OX',cost:598.61},
+    {w:25.5,h:25,cfg:'OX',cost:322.38},{w:25.5,h:37.375,cfg:'OX',cost:403.32},{w:25.5,h:49.625,cfg:'OX',cost:483.42},{w:25.5,h:62,cfg:'OX',cost:563.52},
+    {w:36,h:25,cfg:'OX',cost:385.15},{w:36,h:37.375,cfg:'OX',cost:493.33},{w:36,h:49.625,cfg:'OX',cost:601.09},{w:36,h:62,cfg:'OX',cost:710.09},{w:36,h:75,cfg:'OX',cost:1611.87},
+    {w:52.125,h:25,cfg:'OX',cost:477.64},{w:52.125,h:37.375,cfg:'OX',cost:631.23},{w:52.125,h:49.625,cfg:'OX',cost:783.18},{w:52.125,h:62,cfg:'OX',cost:935.96},
+    {w:48,h:75,cfg:'OX',cost:1774.56},{w:52,h:75,cfg:'OX',cost:1774.56},
+    {w:73,h:25,cfg:'OX',cost:598.61},{w:73,h:37,cfg:'OX',cost:808.37},{w:73,h:49,cfg:'OX',cost:1016.47},{w:73,h:62,cfg:'OX',cost:1383.94},{w:73,h:75,cfg:'OX',cost:2618.11},
+    // XOX config — updated from PGT quote (file 14) — +4.0%
+    {w:105,h:37,cfg:'XOX',cost:1260.00},{w:105,h:49,cfg:'XOX',cost:1387.58},{w:105,h:62,cfg:'XOX',cost:1755.47},
+    {w:109,h:37,cfg:'XOX',cost:1298.81},{w:109,h:49,cfg:'XOX',cost:1533.75},{w:109,h:62,cfg:'XOX',cost:1817.84},
+    {w:110,h:25,cfg:'XOX',cost:1217.88},{w:110,h:37.375,cfg:'XOX',cost:1369.83},{w:110,h:49.625,cfg:'XOX',cost:1664.23},{w:110,h:62,cfg:'XOX',cost:1817.84},
+    {w:120,h:49,cfg:'XOX',cost:1760.43},{w:120,h:62,cfg:'XOX',cost:1919.41}
+  ],
+  'PW5520': [
+    // Updated +4.0%
+    {w:24,h:24,cost:304.86},{w:24,h:36,cost:355.93},{w:24,h:48,cost:416.28},
+    {w:36,h:24,cost:355.93},{w:48,h:48,cost:649.96},
+    {w:52,h:16,cost:416.28},{w:52,h:24,cost:516.87},
+    {w:36,h:36,cost:430.99},{w:36,h:48,cost:531.58},{w:36,h:62,cost:898.34},
+    {w:52,h:36,cost:701.8},{w:52,h:48,cost:945.54},
+    {w:60,h:48,cost:945.54},
+    {w:60,h:62,cost:1618.72},
+    {w:72,h:36,cost:1039.94},{w:72,h:48,cost:1259.69},{w:72,h:62,cost:1877.93},
+    {w:73,h:36,cost:1259.69},{w:73,h:48,cost:1618.72},{w:73,h:49.5,cost:1618.72},{w:73,h:62,cost:1877.93},
+    {w:83,h:72,cost:2433.46},
+    {w:84,h:62,cost:2448.17},{w:84,h:70,cost:2448.17},
+    {w:96,h:24,cost:1675.97},{w:96,h:38,cost:2643.95},{w:96,h:49,cost:2448.17},{w:96,h:62,cost:2894.64}
+  ],
+  'AR5520': [
+    {w:36,h:18,cost:504.42}
+  ],
+  'FD5555': [
+    // Updated +4.0% from PGT quote (file 18)
+    {w:36,h:79,cfg:'X',cost:2088.45},{w:36,h:96,cfg:'X',cost:2353.36},
+    {w:72,h:79,cfg:'XX',cost:3880.71},{w:72,h:96,cfg:'XX',cost:4365.38}
+  ],
+  // SGD770NS — config-based pricing
+  'SGD770NS': [
+    // XX (2-panel) — bypass/standard
+    {w:60,h:79,cfg:'XX',cost:2203.89},{w:72,h:79,cfg:'XX',cost:2435.36},{w:96,h:79,cfg:'XX',cost:2895.19},
+    {w:109,h:79,cfg:'XX',cost:4347.31},{w:120,h:79,cfg:'XX',cost:4347.31},
+    {w:60,h:96,cfg:'XX',cost:2575.37},{w:72,h:96,cfg:'XX',cost:2844.80},{w:96,h:96,cfg:'XX',cost:3384.36},
+    {w:109,h:96,cfg:'XX',cost:5013.95},{w:120,h:96,cfg:'XX',cost:5013.95},
+    // XX h:95 — updated +6.0% (file 15 + aluminum rule)
+    {w:105,h:95,cfg:'XX',cost:4564.85},
+    // XXX (3-panel)
+    {w:109,h:96,cfg:'XXX',cost:4565.05},{w:120,h:96,cfg:'XXX',cost:5411.98},
+    {w:120,h:79,cfg:'XXX',cost:4589.49},{w:144,h:79,cfg:'XXX',cost:4589.49},{w:144,h:96,cfg:'XXX',cost:5411.98},
+    // XXX h:95 — updated +6.0% (file 15)
+    {w:105,h:95,cfg:'XXX',cost:4564.85},{w:143,h:95,cfg:'XXX',cost:5412.55},
+    // OXXO (4-panel)
+    {w:120,h:79,cfg:'OXXO',cost:4688.74},{w:120,h:96,cfg:'OXXO',cost:5475.92},
+    {w:144,h:79,cfg:'OXXO',cost:5168.48},{w:144,h:96,cfg:'OXXO',cost:6017.05},
+    // X-POCKET (1-panel pocket) — updated +6.0% from PGT quote (file 16)
+    {w:35.25,h:80,cfg:'X-POCKET',cost:1332.98},{w:47.25,h:80,cfg:'X-POCKET',cost:1569.61},
+    {w:48,h:79.5,cfg:'X-POCKET',cost:1569.61},{w:59.25,h:80,cfg:'X-POCKET',cost:2318.75},
+    {w:72.25,h:80,cfg:'X-POCKET',cost:2693.51},
+    {w:35.25,h:96,cfg:'X-POCKET',cost:1557.53},{w:47.25,h:96,cfg:'X-POCKET',cost:1835.67},
+    {w:48,h:96,cfg:'X-POCKET',cost:1835.67},{w:72.25,h:96,cfg:'X-POCKET',cost:3517.36},
+    {w:35.25,h:120,cfg:'X-POCKET',cost:2224.77},{w:47.25,h:120,cfg:'X-POCKET',cost:2713.13},
+    {w:59.25,h:120,cfg:'X-POCKET',cost:2769.36},{w:72.25,h:120,cfg:'X-POCKET',cost:4444.27},
+    // XX-POCKET (2-panel pocket) — updated +6.0%
+    {w:57.375,h:80,cfg:'XX-POCKET',cost:2343.41},{w:69.375,h:80,cfg:'XX-POCKET',cost:2537.38},
+    {w:93.375,h:80,cfg:'XX-POCKET',cost:3053.79},{w:117.375,h:80,cfg:'XX-POCKET',cost:4597.76},
+    {w:140.375,h:80,cfg:'XX-POCKET',cost:5380.39},{w:141,h:80,cfg:'XX-POCKET',cost:5380.39},
+    {w:57.375,h:84,cfg:'XX-POCKET',cost:2801.53},
+    {w:57.375,h:96,cfg:'XX-POCKET',cost:2801.53},{w:69.375,h:96,cfg:'XX-POCKET',cost:3076.99},
+    {w:72,h:96,cfg:'XX-POCKET',cost:3076.99},
+    {w:93.375,h:96,cfg:'XX-POCKET',cost:3631.71},{w:117.375,h:96,cfg:'XX-POCKET',cost:5306.43},
+    {w:140.375,h:96,cfg:'XX-POCKET',cost:7112.10},
+    // XX-POCKET h:79 — verified vs PGT quote 8805859 (70 actual → 91.375 frame)
+    {w:91.375,h:79,cfg:'XX-POCKET',cost:2537.38},
+    // XX-POCKET h:95 — updated +6.0% (file 15, 70 actual → 91.375 frame)
+    {w:91.375,h:95,cfg:'XX-POCKET',cost:3077.32},
+    {w:57.375,h:108,cfg:'XX-POCKET',cost:3617.37},{w:69.375,h:108,cfg:'XX-POCKET',cost:4058.12},
+    {w:93.375,h:108,cfg:'XX-POCKET',cost:4941.12},{w:117.375,h:108,cfg:'XX-POCKET',cost:6186.82},
+    {w:140.375,h:108,cfg:'XX-POCKET',cost:7877.38},
+    {w:57.375,h:120,cfg:'XX-POCKET',cost:3921.15},{w:69.375,h:120,cfg:'XX-POCKET',cost:4409.07},
+    {w:93.375,h:120,cfg:'XX-POCKET',cost:5387.49},{w:117.375,h:84,cfg:'XX-POCKET',cost:4819.64},
+    {w:117.375,h:120,cfg:'XX-POCKET',cost:6885.30},{w:140.375,h:120,cfg:'XX-POCKET',cost:8881.17},
+    // XXX-POCKET (3-panel pocket) — updated +6.0%
+    {w:85.4375,h:80,cfg:'XXX-POCKET',cost:3627.19},{w:103.4375,h:80,cfg:'XXX-POCKET',cost:3953.98},
+    {w:139.4375,h:80,cfg:'XXX-POCKET',cost:4681.52},{w:175.4375,h:80,cfg:'XXX-POCKET',cost:7042.67},
+    {w:209.4375,h:80,cfg:'XXX-POCKET',cost:8242.68},
+    {w:85.4375,h:96,cfg:'XXX-POCKET',cost:4351.72},{w:103.4375,h:96,cfg:'XXX-POCKET',cost:4731.72},
+    {w:139.4375,h:96,cfg:'XXX-POCKET',cost:5580.78},{w:175.4375,h:96,cfg:'XXX-POCKET',cost:8110.98},
+    {w:209.4375,h:96,cfg:'XXX-POCKET',cost:10762.69},
+    // XXX-POCKET h:79 — updated +6.0%
+    {w:124.4375,h:79,cfg:'XXX-POCKET',cost:3953.98},
+    // XXX-POCKET h:95 — updated +6.0% (file 15, 105 actual → 124.4375 frame)
+    {w:124.4375,h:95,cfg:'XXX-POCKET',cost:4732.22},
+    // XXX-POCKET — updated +6.0%
+    {w:139.4375,h:79,cfg:'XXX-POCKET',cost:4681.52},
+    {w:114.4375,h:80,cfg:'XXX-POCKET',cost:3953.98},
+    {w:114.4375,h:96,cfg:'XXX-POCKET',cost:4731.72},
+    {w:124.4375,h:80,cfg:'XXX-POCKET',cost:3953.98},
+    {w:128.4375,h:80,cfg:'XXX-POCKET',cost:3953.98},
+    {w:128.4375,h:96,cfg:'XXX-POCKET',cost:4731.72},
+    {w:161.4375,h:80,cfg:'XXX-POCKET',cost:4681.52},
+    {w:161.4375,h:96,cfg:'XXX-POCKET',cost:5580.78},
+    {w:163.4375,h:96,cfg:'XXX-POCKET',cost:5580.78},
+    {w:85.4375,h:120,cfg:'XXX-POCKET',cost:6057.76},{w:103.4375,h:120,cfg:'XXX-POCKET',cost:6739.28},
+    {w:139.4375,h:120,cfg:'XXX-POCKET',cost:8223.8},{w:175.4375,h:120,cfg:'XXX-POCKET',cost:10526.47},
+    {w:209.4375,h:120,cfg:'XXX-POCKET',cost:13609.87}
+  ],
+  'SGD5570NS': [
+    // Updated +6.0%
+    {w:60,h:79,cfg:'XX',cost:2981.55},{w:72,h:79,cfg:'XX',cost:3292.39},
+    {w:96,h:79,cfg:'XX',cost:3910.88},{w:109,h:79,cfg:'XX',cost:5847.38},{w:120,h:79,cfg:'XX',cost:5847.38},
+    {w:60,h:96,cfg:'XX',cost:3477.93},{w:72,h:96,cfg:'XX',cost:3841.03},
+    {w:96,h:96,cfg:'XX',cost:4567.22},{w:109,h:96,cfg:'XX',cost:6739.93},{w:120,h:96,cfg:'XX',cost:6739.93},
+    {w:109,h:96,cfg:'XXX',cost:6156.63},{w:120,h:96,cfg:'XXX',cost:7294.96},
+    {w:144,h:79,cfg:'XXX',cost:6193.42},{w:144,h:96,cfg:'XXX',cost:7294.96},
+    {w:120,h:79,cfg:'OXXO',cost:6337.37},{w:120,h:96,cfg:'OXXO',cost:7390.95},
+    {w:144,h:79,cfg:'OXXO',cost:6982.53},{w:144,h:96,cfg:'OXXO',cost:8118.2},
+    {w:191,h:80,cfg:'OXXO',cost:8219.51},
+    {w:239,h:80,cfg:'OXXO',cost:12096.25},{w:239,h:96,cfg:'OXXO',cost:13914.93},{w:239,h:120,cfg:'OXXO',cost:16906.07}
+  ],
+  'SGD5570': [
+    {w:71,h:79,cfg:'XX',cost:3031.66}
+  ],
+  'MULL': [
+    {w:0,h:36,cost:55.13},{w:0,h:49,cost:75.05},{w:0,h:62,cost:160.45},
+    {w:0,h:73,cost:188.93},{w:0,h:75,cost:194.1}
+  ],
+  'AR5520_HC': [
+    {w:36,h:18,cost:504.42},{w:49,h:24.5,cost:718.74},
+    {w:52,h:26,cost:718.74},{w:73,h:36.5,cost:1406.87}
+  ],
+  'AR5520_EB': [
+    // Updated +4.0%
+    {w:26, h:12,leg:6,cost:545.75},
+    {w:36, h:12,leg:6,cost:545.75},
+    {w:48, h:12,leg:6,cost:656.74},
+    {w:52, h:12,leg:6,cost:777.68},
+    {w:60, h:12,leg:6,cost:777.68},
+    {w:73, h:12,leg:6,cost:1135.14},
+    {w:84, h:12,leg:6,cost:1135.14},
+    {w:96, h:12,leg:6,cost:1431.37},
+    {w:36, h:22,leg:6,cost:656.74},
+    {w:48, h:22,leg:6,cost:777.68},
+    {w:52, h:22,leg:6,cost:939.96},
+    {w:62, h:22,leg:6,cost:939.96},
+    {w:73, h:22,leg:6,cost:1135.14},
+    {w:84, h:22,leg:6,cost:1431.37},
+    {w:96, h:22,leg:6,cost:1682.43}
+  ]
+};
+
+const typeLabels = {
+  'SH5500':'Single Hung 5500',
+  'HR5510':'Horizontal Roller 5510','PW5520':'Picture Window 5520',
+  'AR5520':'Architectural 5520','FD5555':'French Door 5555',
+  'SGD770NS':'Sliding Glass Door 770NS','SGD5570NS':'Sliding Glass Door 5570NS','SGD5570':'Sliding Glass Door 5570',
+  'COMBO_SH5500':'Combo — Single Hung 5500 (2-3 unit)',
+  'MULLBAR':'Mull Bar (standalone)',
+  'MISC':'Miscellaneous / Custom',
+  'AR5520_HC':'AR5520 Half Circle',
+  'AR5520_EB':'AR5520 Eyebrow'
+};
+
+// BHI Door model costs — verified vs quote 114291
+// Fixed add-ons always: Bore $60 + Cutdown $50 + Frame $84.25 = $194.25
+const BHI_DOORS = {
+  'EPHSHVHZ3068_FLUSH_NOGLASS':        { label:'HVHZ 3/0×6/8 Flush — No Glass',                       modelCost: 475.12 },
+  'EPHSHVHZ3068_FLUSH_FULLLITE':       { label:'HVHZ 3/0×6/8 Flush — Full Lite w/Blinds',             modelCost: 1048.25 },
+  'EPHSHVHZ3080_FLUSH_FULLLITE':       { label:'HVHZ 3/0×8/0 Flush — Full Lite w/Blinds',             modelCost: 1340.25 },
+  'EPHSWBD3068_RAISED_HALFLITE2P':     { label:'WBD 3/0×6/8 Raised — ½ Lite/2 Panel w/Blinds',        modelCost: 751.62 },
+  'EPHSWBD3068_RAISED_HALFLITE2P_PRIV':{ label:'WBD 3/0×6/8 Raised — ½ Lite/2 Panel Privacy',         modelCost: 776.37 },
+  'EPHSWBD3068_RAISED_HALFLITE1P':     { label:'WBD 3/0×6/8 Raised — ½ Lite/1 Panel Low-E',           modelCost: 791.87 },
+  'EPHSWBD3068_RAISED_6PANEL':         { label:'WBD 3/0×6/8 Raised — 6 Panel No Glass',               modelCost: 373.37 },
+  'BHI_MANUAL':                        { label:'BHI — Manual Entry',                                   modelCost: 0 }
+};
+const BHI_FIXED_ADDONS = 194.25; // Bore $60 + Cutdown $50 + Frame $84.25
+
+// DH5560 upgrade deltas — DH cost minus SH cost, verified vs quotes 8797488 (SH) & 8802599 (DH)
+// Applied via + Double Hung toggle on SH5500 window cards
+const DH_DELTA = [
+  // Updated +4.0% (both SH and DH are vinyl, delta scales proportionally)
+  {w:18.125,h:25,delta:62.84},{w:18.125,h:37.375,delta:69.37},{w:18.125,h:49.625,delta:79.37},
+  {w:18.125,h:62,delta:88.95},{w:18.125,h:75,delta:96.8},{w:18.125,h:84,delta:103.01},
+  {w:25.5,h:25,delta:71.62},{w:25.5,h:37.375,delta:83.96},{w:25.5,h:49.625,delta:95.98},
+  {w:25.5,h:62,delta:107.41},{w:25.5,h:75,delta:130.26},{w:25.5,h:84,delta:134.22},
+  {w:36,h:25,delta:88.66},{w:36,h:37.375,delta:103.53},{w:36,h:49.625,delta:127.31},
+  {w:36,h:62,delta:145.15},{w:36,h:75,delta:163.4},{w:36,h:84,delta:169.31},
+  {w:52.125,h:25,delta:109.36},{w:52.125,h:37.375,delta:138.94},{w:52.125,h:49.625,delta:163.82},
+  {w:52.125,h:62,delta:189.74},{w:52.125,h:75,delta:154.63},{w:52.125,h:84,delta:353.14},
+  {w:54,h:25,delta:280.9},{w:54,h:37.375,delta:332.33},{w:54,h:49.625,delta:380.27},
+  {w:54,h:62,delta:515.13},{w:54,h:75,delta:504.44},{w:54,h:84,delta:630.52}
+];
+
+function findDHDelta(width, height) {
+  const tol = 2;
+  let best = null, bestDist = Infinity;
+  for (const item of DH_DELTA) {
+    const dw = Math.abs(item.w - width);
+    const dh = Math.abs(item.h - height);
+    if (dw > tol || dh > tol) continue;
+    const dist = dw + dh;
+    if (dist < bestDist) { bestDist = dist; best = item; }
+  }
+  return best ? best.delta : null;
+}
+
+function isSGD(type) { return SGD_TYPES.includes(type); }
+
+function setPocketSide(id, side) {
+  document.getElementById('w'+id+'-pocketside').value = side;
+  const lBtn = document.getElementById('w'+id+'-pocketleft');
+  const rBtn = document.getElementById('w'+id+'-pocketright');
+  const activeStyle = 'background:var(--blue);color:#fff;border-color:var(--blue)';
+  const inactiveStyle = 'background:#fff;color:var(--text);border-color:var(--border)';
+  if (lBtn) lBtn.style.cssText = lBtn.style.cssText.replace(/background:[^;]+;color:[^;]+;border-color:[^;]+/, side==='Left' ? activeStyle : inactiveStyle);
+  if (rBtn) rBtn.style.cssText = rBtn.style.cssText.replace(/background:[^;]+;color:[^;]+;border-color:[^;]+/, side==='Right' ? activeStyle : inactiveStyle);
+  // Simpler approach — just swap inline styles
+  if (lBtn) { lBtn.style.background = side==='Left' ? 'var(--blue)' : '#fff'; lBtn.style.color = side==='Left' ? '#fff' : 'var(--text)'; lBtn.style.borderColor = side==='Left' ? 'var(--blue)' : 'var(--border)'; }
+  if (rBtn) { rBtn.style.background = side==='Right' ? 'var(--blue)' : '#fff'; rBtn.style.color = side==='Right' ? '#fff' : 'var(--text)'; rBtn.style.borderColor = side==='Right' ? 'var(--blue)' : 'var(--border)'; }
+}
+
+// Pocket door actual-opening -> PGT frame width offsets
+// User types actual opening (e.g. 120), PGT stores frame width (e.g. 139.4375)
+const POCKET_WIDTH_OFFSET = {
+  'X-POCKET':   0.25,
+  'XX-POCKET':  21.375,
+  'XXX-POCKET': 19.4375
+};
+
+function normalizePocketWidth(width, cfg) {
+  if (!cfg || !cfg.includes('POCKET')) return width;
+  const offset = POCKET_WIDTH_OFFSET[cfg];
+  return offset !== undefined ? width + offset : width;
+}
+
+function findPrice(type, width, height, cfg) {
+  const list = priceList[type];
+  if (!list) return null;
+  const baseTol = parseFloat(g('tolerance')) || 2;
+  const tol = (SGD_TYPES.includes(type)) ? Math.max(baseTol, 3) : baseTol;
+  if (cfg && cfg.includes('POCKET')) width = normalizePocketWidth(width, cfg);
+  let best = null, bestDist = Infinity;
+  for (const item of list) {
+    const dw = Math.abs(item.w - width);
+    const dh = Math.abs(item.h - height);
+    if (dw > tol || dh > tol) continue;
+    // For SGD types, must match config if provided
+    if (item.cfg && cfg && item.cfg !== cfg) continue;
+    const dist = dw + dh;
+    if (dist < bestDist) { bestDist = dist; best = item; }
+  }
+  return best ? { cost: best.cost, matchW: best.w, matchH: best.h, cfg: best.cfg, exact: best.w===width && best.h===height } : null;
+}
+
+function getLaborCost(type, cfg, qty) {
+  qty = qty || 1;
+  if (isSGD(type)) {
+    const panels = SGD_PANELS[cfg.replace('-POCKET','')] || 2;
+    const perPanel = parseFloat(g('sgdLabor')) || 771.77;
+    return panels * perPanel * qty;
+  }
+  if (FD_TYPES.includes(type)) {
+    return (parseFloat(g('fdLabor')) || 1200) * qty;
+  }
+  return (parseFloat(g('labor')) || 487) * qty;
+}
+
+function applyPGTAdjust(cost, type) {
+  const adj = parseFloat(g('pgtAdjust')) || 0;
+  const sgdAdj = (type && SGD_TYPES.includes(type)) ? (parseFloat(g('sgdAdjust')) || 0) : 0;
+  const total = adj + sgdAdj;
+  if (!total) return cost;
+  return cost * (1 + total / 100);
+}
+
+function calcWindowPrice(cost, type) {
+  cost = applyPGTAdjust(cost, type);
+  const markup = parseFloat(g('markup')) / 100 || 0.3577;
+  const tax = parseFloat(g('taxRate')) / 100 || 0.07;
+  const withMarkup = cost / (1 - markup);
+  const withTax = withMarkup * (1 + tax);
+  return { cost, withMarkup, withTax, tax: withMarkup * tax };
+}
+
+function fmt(n) { return '$' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,','); }
+
+// PW5520 tier pricing — cost based on W+H sum (verified vs PW_CONFIG.xlsx)
+const PW5520_TIERS = [
+  {max:48,    cost:304.86},
+  {max:60,    cost:355.93},
+  {max:72,    cost:430.99},
+  {max:84,    cost:531.58},
+  {max:96,    cost:701.8},
+  {max:108,   cost:1039.94},
+  {max:120,   cost:1244.98},
+  {max:132,      cost:1604.01},
+  {max:138,      cost:1863.22},
+  {max:Infinity, cost:2434.26}
+];
+
+function findPW5520Price(width, height) {
+  const sum = width + height;
+  const tier = PW5520_TIERS.find(t => sum <= t.max);
+  return tier ? { cost: tier.cost, sum: sum.toFixed(2) } : null;
+}
+
+// SIZE CODES — PGT commodity size codes by product/width/height
+const SIZE_CODES = {
+  'SH5500': [
+    {w:18.125,h:25,code:'12'},{w:18.125,h:37.375,code:'13'},{w:18.125,h:49.625,code:'14'},
+    {w:18.125,h:62,code:'15'},{w:18.125,h:75,code:'16'},{w:18.125,h:84,code:'17'},
+    {w:25.5,h:25,code:'H32'},{w:25.5,h:37.375,code:'H33'},{w:25.5,h:49.625,code:'H34'},
+    {w:25.5,h:62,code:'H35'},{w:25.5,h:75,code:'H36'},{w:25.5,h:84,code:'H37'},
+    {w:36,h:25,code:'22'},{w:36,h:37.375,code:'23'},{w:36,h:49.625,code:'24'},
+    {w:36,h:62,code:'25'},{w:36,h:75,code:'26'},{w:36,h:84,code:'27'},
+    {w:52.125,h:25,code:'32'},{w:52.125,h:37.375,code:'33'},{w:52.125,h:49.625,code:'34'},
+    {w:52.125,h:62,code:'35'},{w:52.125,h:75,code:'36'},{w:52.125,h:84,code:'37'},
+    {w:54,h:25,code:'T12'},{w:54,h:37.375,code:'T13'},{w:54,h:49.625,code:'T14'},
+    {w:54,h:62,code:'T15'},{w:54,h:75,code:'T16'},{w:54,h:84,code:'T17'}
+  ],
+  'HR5510': [
+    {w:25.5,h:25,code:'H32'},{w:25.5,h:37.375,code:'H33'},{w:25.5,h:49.625,code:'H34'},{w:25.5,h:62,code:'H35'},
+    {w:36,h:25,code:'22'},{w:36,h:37.375,code:'23'},{w:36,h:49.625,code:'24'},{w:36,h:62,code:'25'},
+    {w:52.125,h:25,code:'32'},{w:52.125,h:37.375,code:'33'},{w:52.125,h:49.625,code:'34'},{w:52.125,h:62,code:'35'},
+    {w:110,h:25,code:'T22'},{w:110,h:37.375,code:'T23'},{w:110,h:49.625,code:'T24'},{w:110,h:62,code:'T25'}
+  ]
+};
+
+function findSizeCode(type, width, height) {
+  const list = SIZE_CODES[type];
+  if (!list) return null;
+  const tol = 2;
+  let best = null, bestDist = Infinity;
+  for (const item of list) {
+    const dw = Math.abs(item.w - width), dh = Math.abs(item.h - height);
+    if (dw > tol || dh > tol) continue;
+    const dist = dw + dh;
+    if (dist < bestDist) { bestDist = dist; best = item; }
+  }
+  return best ? best.code : null;
+}
+
+// PW5520 Bronze/White color upcharge deltas — verified vs PGT quotes (file 19 B/W vs file 13 White +4%)
+// NOTE: 80x59 and 96x38 deltas were anomalous (<$22) — interpolated from neighbors
+const PW5520_COLOR_DELTAS = [
+  {w:24,  h:24,   delta:65.02},  {w:24,  h:36,   delta:81.27},  {w:24,  h:48,   delta:97.52},
+  {w:36,  h:24,   delta:81.27},  {w:36,  h:36,   delta:97.51},  {w:36,  h:48,   delta:113.76},
+  {w:36,  h:62,   delta:132.75}, {w:52,  h:16,   delta:92.10},  {w:52,  h:24,   delta:102.94},
+  {w:52,  h:36,   delta:119.20}, {w:52,  h:48,   delta:135.46}, {w:60,  h:48,   delta:146.29},
+  {w:60,  h:62,   delta:165.27}, {w:72,  h:36,   delta:146.29}, {w:72,  h:48,   delta:162.56},
+  {w:72,  h:62,   delta:166.84}, {w:73,  h:36,   delta:147.66}, {w:73,  h:48,   delta:163.91},
+  {w:73,  h:49.5, delta:165.94}, {w:73,  h:62,   delta:182.89}, {w:80,  h:59,   delta:166.00},
+  {w:83,  h:72,   delta:439.07}, {w:84,  h:62,   delta:426.88}, {w:84,  h:70,   delta:437.71},
+  {w:96,  h:24,   delta:162.59}, {w:96,  h:38,   delta:175.00}, {w:96,  h:49,   delta:425.52},
+  {w:96,  h:62,   delta:214.11}
+];
+
+function findPW5520ColorDelta(width, height, color) {
+  if (color !== 'Bronze/White') return null;
+  const tol = 3;
+  let best = null, bestDist = Infinity;
+  for (const item of PW5520_COLOR_DELTAS) {
+    const dw = Math.abs(item.w - width), dh = Math.abs(item.h - height);
+    if (dw > tol || dh > tol) continue;
+    const dist = dw + dh;
+    if (dist < bestDist) { bestDist = dist; best = item; }
+  }
+  return best ? best.delta : null;
+}
+
+// AR5520 Half Circle pricing — WHITE baseline, verified vs PGT quotes 8797516 & 8802057
+// Indexed by width; H = W/2 always. Tolerance-matched on width.
+const AR5520_HC_LIST = [
+  // Updated +4.0%
+  {w:24,  cost:426.35},
+  {w:36,  cost:504.42},
+  {w:48,  cost:591.68},
+  {w:49,  cost:718.74},
+  {w:52,  cost:718.74},
+  {w:60,  cost:877.96},
+  {w:70,  cost:1136.68},
+  {w:73,  cost:1406.87},
+  {w:76,  cost:1655.64},
+  {w:84,  cost:2066.68},
+  {w:96,  cost:2353.73}
+];
+
+function findHCPrice(width) {
+  const tol = 3;
+  let best = null, bestDist = Infinity;
+  for (const item of AR5520_HC_LIST) {
+    const d = Math.abs(item.w - width);
+    if (d <= tol && d < bestDist) { bestDist = d; best = item; }
+  }
+  if (!best) return null;
+  const height = best.w / 2;
+  const sum = best.w + height;
+  return { cost: best.cost, matchW: best.w, height: height.toFixed(1), sum: sum.toFixed(1) };
+}
+
+function findARPrice(type, width, height, leg) {
+  const list = priceList[type];
+  if (!list) return null;
+  const tol = parseFloat(g('tolerance')) || 3;
+  let best = null, bestDist = Infinity;
+  for (const item of list) {
+    const dw = Math.abs(item.w - width);
+    const dh = Math.abs(item.h - height);
+    const dl = leg && item.leg ? Math.abs(item.leg - leg) : 0;
+    if (dw > tol || dh > tol) continue;
+    const dist = dw + dh + dl;
+    if (dist < bestDist) { bestDist = dist; best = item; }
+  }
+  return best || null;
+}
+
+function filterFrameColorOptions(id, type) {
+  const sel = document.getElementById('w'+id+'-framecolor');
+  if (!sel) return;
+  const bwOpt = sel.querySelector('option[value="Bronze/White"]');
+  if (!bwOpt) return;
+  const isSGD770 = type === 'SGD770NS';
+  bwOpt.disabled = isSGD770;
+  bwOpt.style.display = isSGD770 ? 'none' : '';
+  if (isSGD770 && sel.value === 'Bronze/White') sel.value = 'White';
+}
+
+function updatePrice(id) {
+  const type = g('w'+id+'-type');
+  const width = getDimValue('w'+id+'-width-sel','w'+id+'-width');
+  const height = getDimValue('w'+id+'-height-sel','w'+id+'-height');
+  const qty = parseInt(g('w'+id+'-qty')) || 1;
+  const cfg = g('w'+id+'-config');
+  const box = document.getElementById('w'+id+'-pricebox');
+  filterFrameColorOptions(id, type);
+
+  // Show/hide config dropdown
+  const cfgField = document.getElementById('w'+id+'-configfield');
+  if (cfgField) {
+    const comboField = document.getElementById('w'+id+'-combofield');
+    if (isSGD(type) || FD_TYPES.includes(type) || type==='HR5510') {
+      cfgField.classList.add('show');
+      if (comboField) comboField.classList.remove('show');
+      const miscFieldSGD = document.getElementById('w'+id+'-miscfield');
+      if (miscFieldSGD) miscFieldSGD.classList.remove('show');
+      const screenField = document.getElementById('w'+id+'-screenfield');
+      if (screenField) {
+        screenField.style.display = isSGD(type) ? 'block' : 'none';
+        if (isSGD(type) && height) {
+          // Auto-select screen price based on height — 79"=$222, 96"=$242
+          const screenPriceSel = document.getElementById('w'+id+'-screenprice');
+          if (screenPriceSel && !screenPriceSel.dataset.manual) {
+            const h = parseFloat(height);
+            screenPriceSel.value = h >= 90 ? '242' : (h >= 75 ? '222' : '0');
+          }
+        }
+      }
+      const pocketSideField = document.getElementById('w'+id+'-pocketsidefield');
+      if (pocketSideField) {
+        const isPocket = cfg && cfg.includes('POCKET');
+        pocketSideField.style.display = isPocket ? 'block' : 'none';
+        if (isPocket && !document.getElementById('w'+id+'-pocketside').value) {
+          setPocketSide(id, 'Left');
+        }
+      }
+      const cfgSel = document.getElementById('w'+id+'-config');
+      const configs = TYPE_CONFIGS[type] || ['XX'];
+      const curVal = cfgSel.value;
+      cfgSel.innerHTML = '<option value="">-- config --</option>' + configs.map(c=>`<option value="${c}"${c===curVal?' selected':''}>${c}</option>`).join('');
+    } else if (MISC_ITEM_TYPES.includes(type)) {
+      cfgField.classList.remove('show');
+      if (comboField) comboField.classList.remove('show');
+      const legFieldM = document.getElementById('w'+id+'-legfield');
+      if (legFieldM) legFieldM.classList.remove('show');
+      const miscField = document.getElementById('w'+id+'-miscfield');
+      if (miscField) miscField.classList.add('show');
+    } else if (type === 'AR5520_HC') {
+      cfgField.classList.remove('show');
+      if (comboField) comboField.classList.remove('show');
+      const legField = document.getElementById('w'+id+'-legfield');
+      if (legField) legField.classList.remove('show');
+      // Auto-fill height as width/2 for true semicircle
+      const wVal = parseFloat(g('w'+id+'-width'));
+      const hField = document.getElementById('w'+id+'-height');
+      if (wVal && hField && !hField.value) { hField.value = (wVal/2).toFixed(1); }
+    } else if (type === 'AR5520_EB') {
+      cfgField.classList.remove('show');
+      if (comboField) comboField.classList.remove('show');
+      // Show leg field
+      const legField = document.getElementById('w'+id+'-legfield');
+      if (legField) legField.classList.add('show');
+    } else if (COMBO_TYPES.includes(type)) {
+      cfgField.classList.remove('show');
+      if (comboField) comboField.classList.add('show');
+    } else {
+      cfgField.classList.remove('show');
+      if (comboField) comboField.classList.remove('show');
+      const legFieldElse = document.getElementById('w'+id+'-legfield');
+      if (legFieldElse) legFieldElse.classList.remove('show');
+      const miscFieldElse = document.getElementById('w'+id+'-miscfield');
+      if (miscFieldElse) miscFieldElse.classList.remove('show');
+      const screenFieldElse = document.getElementById('w'+id+'-screenfield');
+      if (screenFieldElse) screenFieldElse.style.display = 'none';
+    }
+  }
+
+
+
+  // Auto-refresh grid delta if grid is showing and was auto-filled
+  const gridField = document.getElementById('w'+id+'-gridfield');
+  if (gridField && gridField.style.display !== 'none') {
+    autoFillGridDelta(id);
+  }
+
+  if (!type || !width || !height) { box.classList.remove('show'); updateTotals(); return; }
+  if ((isSGD(type) || FD_TYPES.includes(type) || type==='HR5510') && !cfg) { box.innerHTML='<div class="price-nomatch">Select a configuration</div>'; box.classList.add('show'); updateTotals(); return; }
+
+  // COMBO UNIT LOGIC
+  if (COMBO_TYPES.includes(type)) {
+    const baseType = type.replace('COMBO_','');
+    const units = parseInt(g('w'+id+'-combounits')) || 2;
+    const unitWidth = width / units;
+    const markup = parseFloat(g('markup'))/100||0.3577;
+    const tax = parseFloat(g('taxRate'))/100||0.07;
+    const laborPer = parseFloat(g('labor'))||497.77;
+
+    // Find each unit price
+    const unitMatch = findPrice(baseType, unitWidth, height, null);
+    // Find mull price by height
+    const mullMatch = findPrice('MULL', 0, height, null);
+
+    if (!unitMatch) {
+      box.innerHTML='<div class="price-nomatch">No match for individual unit size — try adjusting tolerance</div>';
+      box.classList.add('show'); updateTotals(); return;
+    }
+
+    const mullCost = mullMatch ? mullMatch.cost : 91.30;
+    const mullCount = units - 1;
+    const unitCostTotal = unitMatch.cost * units;
+    const mullCostTotal = mullCost * mullCount;
+    const totalPGT = unitCostTotal + mullCostTotal;
+    const withMarkup = totalPGT / (1-markup);
+    const withTax = withMarkup * (1+tax);
+    const taxAmt = withMarkup * tax;
+    const labor = laborPer * units * qty;
+    const adder = parseFloat(g('w'+id+'-adder'))||0;
+    const adderDesc = g('w'+id+'-adderdesc')||'Additional charge';
+    const lineTotal = (withMarkup * qty) + (taxAmt * qty) + labor + adder;
+
+    box.innerHTML = `
+      <div class="price-row"><span>${units} units @ ${fmt(unitMatch.cost)} each</span><span>${fmt(unitCostTotal)}</span></div>
+      <div class="price-row"><span>${mullCount} mull bar${mullCount>1?'s':''} @ ${fmt(mullCost)} each</span><span>${fmt(mullCostTotal)}</span></div>
+      <div class="price-row"><span>PGT total cost</span><span>${fmt(totalPGT)}</span></div>
+      <div class="price-row"><span>After markup (${g('markup')||35.77}%)</span><span>${fmt(withMarkup)}</span></div>
+      <div class="price-row"><span>Tax (${g('taxRate')||7}%)</span><span>${fmt(taxAmt)}</span></div>
+      <div class="price-row"><span>Labor (${units} units × ${fmt(laborPer)})</span><span>${fmt(labor)}</span></div>
+      ${adder?`<div class="price-row"><span>${adderDesc}</span><span>${fmt(adder)}</span></div>`:''}
+      ${qty>1?`<div class="price-row"><span>× ${qty} combos</span><span></span></div>`:''}
+      <div class="price-row total"><span>Line Total</span><span>${fmt(lineTotal)}</span></div>
+      <div class="match-note">Each unit matched to ${unitMatch.matchW}" × ${unitMatch.matchH}" · ${mullCount} mull bar${mullCount>1?'s':''}</div>
+    `;
+    box.classList.add('show'); updateTotals(); return;
+  }
+
+  // MISC / CUSTOM ITEM
+  if (MISC_ITEM_TYPES.includes(type)) {
+    const markup = parseFloat(g('markup'))/100||0.3577;
+    const tax = parseFloat(g('taxRate'))/100||0.07;
+    const cost = parseFloat(g('w'+id+'-misccost'))||0;
+    const miscLabor = parseFloat(g('w'+id+'-misclabor'))||0;
+    const desc = g('w'+id+'-miscdesc')||'Miscellaneous item';
+    if (!cost) { box.innerHTML='<div class="price-nomatch">Enter item cost above</div>'; box.classList.add('show'); updateTotals(); return; }
+    const withMarkup = cost / (1-markup);
+    const taxAmt = withMarkup * tax;
+    const adder = parseFloat(g('w'+id+'-adder'))||0;
+    const adderDesc = g('w'+id+'-adderdesc')||'Additional charge';
+    const lineTotal = (withMarkup*qty) + (taxAmt*qty) + (miscLabor*qty) + adder;
+    box.innerHTML = `
+      <div class="price-row"><span>Cost</span><span>${fmt(cost)}</span></div>
+      <div class="price-row"><span>After markup (${g('markup')||35.77}%)</span><span>${fmt(withMarkup)}</span></div>
+      <div class="price-row"><span>Tax (${g('taxRate')||7}%)</span><span>${fmt(taxAmt)}</span></div>
+      <div class="price-row"><span>Labor</span><span>${fmt(miscLabor)}</span></div>
+      ${qty>1?`<div class="price-row"><span>× ${qty}</span><span></span></div>`:''}
+      ${adder?`<div class="price-row"><span>${adderDesc}</span><span>${fmt(adder)}</span></div>`:''}
+      <div class="price-row total"><span>Line Total</span><span>${fmt(lineTotal)}</span></div>
+      <div class="match-note">${desc}</div>
+    `;
+    box.classList.add('show'); updateTotals(); return;
+  }
+
+  // AR5520 HALF CIRCLE — tier pricing based on W+H sum (H auto = W/2)
+  if (type === 'AR5520_HC') {
+    const result = findHCPrice(width);
+    if (!result) { box.innerHTML='<div class="price-nomatch">Enter width</div>'; box.classList.add('show'); updateTotals(); return; }
+    // Always force height to W/2 for half circle
+    const hField = document.getElementById('w'+id+'-height');
+    if (hField) hField.value = result.height;
+    const markup = parseFloat(g('markup'))/100||0.3577;
+    const tax = parseFloat(g('taxRate'))/100||0.07;
+    const labor = parseFloat(g('labor'))||497.77;
+    const frameColor = g('w'+id+'-framecolor');
+    const colorDelta = findColorDelta('AR5520_HC', width, 0, frameColor);
+    const p = calcWindowPrice(result.cost);
+    const colorP = colorDelta ? calcWindowPrice(colorDelta * qty) : null;
+    const colorTotal = colorP ? colorP.withMarkup + colorP.tax : 0;
+    const adder = parseFloat(g('w'+id+'-adder'))||0;
+    const adderDesc = g('w'+id+'-adderdesc')||'Additional charge';
+    const gridCost = parseFloat(g('w'+id+'-grid'))||0;
+    const gridP = gridCost ? calcWindowPrice(gridCost*qty) : null;
+    const gridTotal = gridP ? gridP.withMarkup + gridP.tax : 0;
+    const lineTotal = (p.withMarkup*qty) + (p.tax*qty) + (labor*qty) + adder + gridTotal + colorTotal;
+    box.innerHTML = `
+      <div class="price-row"><span>PGT cost (W+H = ${result.sum}")</span><span>${fmt(result.cost)}</span></div>
+      ${colorP?`<div class="price-row"><span>Bronze/White upcharge (PGT)</span><span>${fmt(colorDelta)}</span></div>`:''}
+      <div class="price-row"><span>After markup (${g('markup')||35.77}%)</span><span>${fmt(p.withMarkup)}</span></div>
+      <div class="price-row"><span>Tax (${g('taxRate')||7}%)</span><span>${fmt(p.tax)}</span></div>
+      <div class="price-row"><span>Labor (${qty} × ${fmt(labor)})</span><span>${fmt(labor*qty)}</span></div>
+      ${colorP?`<div class="price-row"><span>B/W upcharge w/ markup & tax</span><span>${fmt(colorTotal)}</span></div>`:''}
+      ${gridP?`<div class="price-row"><span>Grid w/ markup & tax</span><span>${fmt(gridTotal)}</span></div>`:''}
+      ${adder?`<div class="price-row"><span>${adderDesc}</span><span>${fmt(adder)}</span></div>`:''}
+      ${qty>1?`<div class="price-row"><span>× ${qty} windows</span><span></span></div>`:''}
+      <div class="price-row total"><span>Line Total</span><span>${fmt(lineTotal)}</span></div>
+      <div class="match-note">${width}" wide · matched to ${result.matchW}" · H = ${result.height}" · W+H = ${result.sum}"</div>
+    `;
+    box.classList.add('show'); updateTotals(); return;
+  }
+
+  // AR5520 EYEBROW — still uses lookup table
+  if (type === 'AR5520_EB') {
+    const markup = parseFloat(g('markup'))/100||0.3577;
+    const tax = parseFloat(g('taxRate'))/100||0.07;
+    const labor = parseFloat(g('labor'))||497.77;
+    const leg = parseFloat(g('w'+id+'-leg'))||0;
+    const arMatch = findARPrice(type, width, height, leg);
+    if (!arMatch) { box.innerHTML='<div class="price-nomatch">No match found — check size or leg height</div>'; box.classList.add('show'); updateTotals(); return; }
+    const frameColor = g('w'+id+'-framecolor');
+    const colorDelta = findColorDelta(type, width, height, frameColor);
+    const p = calcWindowPrice(arMatch.cost);
+    const colorP = colorDelta ? calcWindowPrice(colorDelta * qty) : null;
+    const colorTotal = colorP ? colorP.withMarkup + colorP.tax : 0;
+    const adder = parseFloat(g('w'+id+'-adder'))||0;
+    const adderDesc = g('w'+id+'-adderdesc')||'Additional charge';
+    const lineTotal = (p.withMarkup*qty) + (p.tax*qty) + (labor*qty) + adder + colorTotal;
+    box.innerHTML = `
+      <div class="price-row"><span>PGT cost</span><span>${fmt(arMatch.cost)}</span></div>
+      ${colorP?`<div class="price-row"><span>Bronze/White upcharge (PGT)</span><span>${fmt(colorDelta)}</span></div>`:''}
+      <div class="price-row"><span>After markup</span><span>${fmt(p.withMarkup)}</span></div>
+      <div class="price-row"><span>Tax</span><span>${fmt(p.tax)}</span></div>
+      <div class="price-row"><span>Labor (${qty} × ${fmt(labor)})</span><span>${fmt(labor*qty)}</span></div>
+      ${colorP?`<div class="price-row"><span>B/W upcharge w/ markup & tax</span><span>${fmt(colorTotal)}</span></div>`:''}
+      ${adder?`<div class="price-row"><span>${adderDesc}</span><span>${fmt(adder)}</span></div>`:''}
+      ${qty>1?`<div class="price-row"><span>× ${qty}</span><span></span></div>`:''}
+      <div class="price-row total"><span>Line Total</span><span>${fmt(lineTotal)}</span></div>
+      <div class="match-note">Matched to ${arMatch.w}" × ${arMatch.h}"${arMatch.leg?' · leg: '+arMatch.leg+'"':''}</div>
+    `;
+    box.classList.add('show'); updateTotals(); return;
+  }
+
+  // MULL BAR STANDALONE
+  if (MULL_TYPES.includes(type)) {
+    const markup = parseFloat(g('markup'))/100||0.3577;
+    const tax = parseFloat(g('taxRate'))/100||0.07;
+    const mullMatch = findPrice('MULL', 0, height, null);
+    if (!mullMatch) { box.innerHTML='<div class="price-nomatch">No mull price for this length — enter height as the mull length</div>'; box.classList.add('show'); updateTotals(); return; }
+    const p = calcWindowPrice(mullMatch.cost);
+    const lineTotal = (p.withMarkup * qty) + (p.tax * qty);
+    box.innerHTML = `
+      <div class="price-row"><span>PGT cost</span><span>${fmt(mullMatch.cost)}</span></div>
+      <div class="price-row"><span>After markup</span><span>${fmt(p.withMarkup)}</span></div>
+      <div class="price-row"><span>Tax</span><span>${fmt(p.tax)}</span></div>
+      <div class="price-row"><span>No labor on mull bars</span><span>—</span></div>
+      ${qty>1?`<div class="price-row"><span>× ${qty}</span><span></span></div>`:''}
+      <div class="price-row total"><span>Line Total</span><span>${fmt(lineTotal)}</span></div>
+      <div class="match-note">Matched to ${mullMatch.matchH}" mull bar</div>
+    `;
+    box.classList.add('show'); updateTotals(); return;
+  }
+
+  // PW5520 PICTURE WINDOW — tier pricing based on W+H sum
+  if (type === 'PW5520') {
+    const result = findPW5520Price(width, height);
+    if (!result) { box.innerHTML='<div class="price-nomatch">Enter width and height</div>'; box.classList.add('show'); updateTotals(); return; }
+    const markup = parseFloat(g('markup'))/100||0.3577;
+    const tax = parseFloat(g('taxRate'))/100||0.07;
+    const labor = parseFloat(g('labor'))||497.77;
+    const p = calcWindowPrice(result.cost);
+    const adder = parseFloat(g('w'+id+'-adder'))||0;
+    const adderDesc = g('w'+id+'-adderdesc')||'Additional charge';
+    const gridCost = parseFloat(g('w'+id+'-grid'))||0;
+    const gridP = gridCost ? calcWindowPrice(gridCost*qty) : null;
+    const gridTotal = gridP ? gridP.withMarkup + gridP.tax : 0;
+    const colorDelta = findPW5520ColorDelta(width, height, frameColor);
+    const colorP = colorDelta ? calcWindowPrice(colorDelta * qty) : null;
+    const colorTotal = colorP ? colorP.withMarkup + colorP.tax : 0;
+    const lineTotal = (p.withMarkup*qty) + (p.tax*qty) + (labor*qty) + adder + gridTotal + colorTotal;
+    box.innerHTML = `
+      <div class="price-row"><span>PGT cost (W+H = ${result.sum}")</span><span>${fmt(result.cost)}</span></div>
+      <div class="price-row"><span>After markup (${g('markup')||35.77}%)</span><span>${fmt(p.withMarkup)}</span></div>
+      <div class="price-row"><span>Tax (${g('taxRate')||7}%)</span><span>${fmt(p.tax)}</span></div>
+      <div class="price-row"><span>Labor (${qty} × ${fmt(labor)})</span><span>${fmt(labor*qty)}</span></div>
+      ${colorP?`<div class="price-row"><span>Bronze/White upcharge (PGT)</span><span>${fmt(colorDelta)}</span></div>`:''}
+      ${colorP?`<div class="price-row"><span>B/W upcharge w/ markup & tax</span><span>${fmt(colorTotal)}</span></div>`:''}
+      ${gridP?`<div class="price-row"><span>Grid w/ markup & tax</span><span>${fmt(gridTotal)}</span></div>`:''}
+      ${adder?`<div class="price-row"><span>${adderDesc}</span><span>${fmt(adder)}</span></div>`:''}
+      ${qty>1?`<div class="price-row"><span>× ${qty} windows</span><span></span></div>`:''}
+      <div class="price-row total"><span>Line Total</span><span>${fmt(lineTotal)}</span></div>
+      <div class="match-note">${width}" × ${height}" · W+H = ${result.sum}" · any custom size supported</div>
+    `;
+    box.classList.add('show'); updateTotals(); return;
+  }
+
+  const match = findPrice(type, width, height, cfg);
+  if (!match) {
+    box.innerHTML='<div class="price-nomatch">No match found — try adjusting size or tolerance</div>'; box.classList.add('show'); updateTotals(); return;
+  }
+
+  const frameColor = g('w'+id+'-framecolor');
+  const colorDelta = findColorDelta(type, width, height, frameColor);
+  const p = calcWindowPrice(match.cost, type);
+  const colorP = colorDelta ? calcWindowPrice(colorDelta * qty) : null;
+  const colorTotal = colorP ? colorP.withMarkup + colorP.tax : 0;
+  const labor = getLaborCost(type, cfg, qty);
+  const lineWindows = p.withMarkup * qty;
+  const lineTax = p.tax * qty;
+  const adder = parseFloat(g('w'+id+'-adder'))||0;
+  const adderDesc = g('w'+id+'-adderdesc')||'Additional charge';
+  // Grid add-on — margin & tax applied to PGT delta
+  const gridCost = parseFloat(g('w'+id+'-grid'))||0;
+  const gridP = gridCost ? calcWindowPrice(gridCost * qty) : null;
+  const gridTotal = gridP ? gridP.withMarkup + gridP.tax : 0;
+  // Screen cost for SGDs — qty × per-screen price (79"=$222, 96"=$242)
+  const screenQty = parseInt(g('w'+id+'-screenqty'))||0;
+  const screenUnitCost = parseFloat(g('w'+id+'-screenprice'))||0;
+  const screenP = (screenQty > 0 && screenUnitCost > 0) ? calcWindowPrice(screenUnitCost * screenQty) : null;
+  const screenTotal = screenP ? screenP.withMarkup + screenP.tax : 0;
+  const woodTotal = getWoodTotal(id);
+  const reinCost = getReinforcement(id);
+  const reinP = reinCost ? calcWindowPrice(reinCost * qty) : null;
+  const reinTotal = reinP ? reinP.withMarkup + reinP.tax : 0;
+  const dhDelta = getDHDeltaForWindow(id);
+  const dhP = dhDelta ? calcWindowPrice(dhDelta * qty) : null;
+  const dhTotal = dhP ? dhP.withMarkup + dhP.tax : 0;
+  const lineTotal = lineWindows + lineTax + labor + adder + screenTotal + gridTotal + colorTotal + woodTotal + reinTotal + dhTotal;
+
+  let laborNote;
+  if (isSGD(type)) { laborNote = `${SGD_PANELS[cfg.replace('-POCKET','')]||2} panels × ${fmt(parseFloat(g('sgdLabor'))||771.77)}`; }
+  else if (FD_TYPES.includes(type)) { laborNote = `${qty} door${qty>1?'s':''} × ${fmt(parseFloat(g('fdLabor'))||1200)}`; }
+  else { laborNote = `${qty} window${qty>1?'s':''} × ${fmt(parseFloat(g('labor'))||497.77)}`; }
+
+  const pocketSide = g('w'+id+'-pocketside');
+  const pocketNote = cfg && cfg.includes('POCKET') && pocketSide ? ` · Pocket ${pocketSide}` : '';
+
+  box.innerHTML = `
+    <div class="price-row"><span>PGT cost${findSizeCode(type,width,height)?' · Code '+findSizeCode(type,width,height):''}</span><span>${fmt(match.cost)}</span></div>
+    ${colorP?`<div class="price-row"><span>Bronze/White upcharge (PGT)</span><span>${fmt(colorDelta)}</span></div>`:''}
+    <div class="price-row"><span>After margin (${g('markup')||35.77}%)</span><span>${fmt(p.withMarkup)}</span></div>
+    <div class="price-row"><span>Tax (${g('taxRate')||7}%)</span><span>${fmt(p.tax)}</span></div>
+    <div class="price-row"><span>Labor (${laborNote})</span><span>${fmt(labor)}</span></div>
+    ${gridP?`<div class="price-row"><span>Grid w/ margin & tax (${qty > 1 ? qty+'×' : ''}$${gridCost})</span><span>${fmt(gridTotal)}</span></div>`:''}
+    ${colorP?`<div class="price-row"><span>B/W upcharge w/ margin & tax</span><span>${fmt(colorTotal)}</span></div>`:''}
+    ${reinP?`<div class="price-row"><span>Reinforcement (PGT +$${reinCost.toFixed(2)} × ${qty}) w/ markup & tax</span><span>${fmt(reinTotal)}</span></div>`:''}
+    ${dhP?`<div class="price-row"><span>Double Hung upgrade (PGT +$${dhDelta.toFixed(2)} × ${qty}) w/ markup & tax</span><span>${fmt(dhTotal)}</span></div>`:''}
+    ${screenP?`<div class="price-row"><span>Screens (${screenQty} × $${screenUnitCost}) w/ margin & tax</span><span>${fmt(screenTotal)}</span></div>`:''}
+    ${woodTotal?`
+    <div class="price-row"><span>Wood Trim board (${parseFloat(g('w'+id+'-woodlf')||0).toFixed(2)} LF × $${g('woodCostPerLF')||5.81})</span><span>${fmt((parseFloat(g('w'+id+'-woodlf'))||0)*(parseFloat(g('woodCostPerLF'))||5.81))}</span></div>
+    <div class="price-row"><span>Wood Trim labor (${qty} × $${g('woodLaborPerWin')||100})</span><span>${fmt((parseFloat(g('woodLaborPerWin'))||100)*qty)}</span></div>`:''}
+    ${adder?`<div class="price-row"><span>${adderDesc}</span><span>${fmt(adder)}</span></div>`:''}
+    ${qty>1?`<div class="price-row"><span>× ${qty} windows</span><span></span></div>`:''}
+    <div class="price-row total"><span>Line Total</span><span>${fmt(lineTotal)}</span></div>
+    <div class="match-note">${match.exact?'Exact match':`Matched to ${match.matchW}" × ${match.matchH}"`}${match.cfg?' · Config: '+match.cfg:''}${pocketNote}</div>
+  `;
+  box.classList.add('show');
+  updateTotals();
+}
+
+function recalcAll() {
+  for (let i = 1; i <= winCount; i++) {
+    if (document.getElementById('win-'+i)) updatePrice(i);
+  }
+  for (let i = 1; i <= doorCount; i++) {
+    if (document.getElementById('door-'+i)) updateDoorPrice(i);
+  }
+  updateTotals();
+}
+
+function updateTotals() {
+  let windowsTotal=0, taxTotal=0, laborTotal=0, productCostTotal=0;
+  const margin = parseFloat(g('markup'))/100||0.3577;
+  const tax = parseFloat(g('taxRate'))/100||0.07;
+
+  for (let i=1; i<=winCount; i++) {
+    if (!document.getElementById('win-'+i)) continue;
+    const type=g('w'+i+'-type'), width=getDimValue('w'+i+'-width-sel','w'+i+'-width'), height=getDimValue('w'+i+'-height-sel','w'+i+'-height');
+    const qty=parseInt(g('w'+i+'-qty'))||1, cfg=g('w'+i+'-config');
+    if (!type||!width||!height) continue;
+    if ((isSGD(type)||FD_TYPES.includes(type)||type==='HR5510')&&!cfg) continue;
+    if (MISC_ITEM_TYPES.includes(type)) {
+      const cost = parseFloat(g('w'+i+'-misccost'))||0;
+      const miscLabor = parseFloat(g('w'+i+'-misclabor'))||0;
+      if (!cost) continue;
+      const p = calcWindowPrice(cost);
+      productCostTotal += cost*qty;
+      windowsTotal += p.withMarkup*qty;
+      taxTotal += p.tax*qty;
+      laborTotal += miscLabor*qty;
+      laborTotal += parseFloat(g('w'+i+'-adder'))||0;
+      continue;
+    }
+    if (AR_TYPES.includes(type)) {
+      if (type === 'AR5520_HC') {
+        const result = findHCPrice(parseFloat(width));
+        if (!result) continue;
+        const p = calcWindowPrice(result.cost);
+        productCostTotal += result.cost*qty;
+        windowsTotal += p.withMarkup*qty;
+        taxTotal += p.tax*qty;
+        laborTotal += (parseFloat(g('labor'))||497.77)*qty;
+        const colorDeltaT = findColorDelta('AR5520_HC', parseFloat(width), 0, g('w'+i+'-framecolor'));
+        if (colorDeltaT) { const cp = calcWindowPrice(colorDeltaT*qty); productCostTotal += colorDeltaT*qty; windowsTotal += cp.withMarkup; taxTotal += cp.tax; }
+      } else {
+        const leg = parseFloat(g('w'+i+'-leg'))||0;
+        const arMatch = findARPrice(type,width,height,leg);
+        if (!arMatch) continue;
+        const p = calcWindowPrice(arMatch.cost);
+        productCostTotal += arMatch.cost*qty;
+        windowsTotal += p.withMarkup*qty;
+        taxTotal += p.tax*qty;
+        laborTotal += (parseFloat(g('labor'))||497.77)*qty;
+        const colorDeltaT = findColorDelta(type, parseFloat(width), parseFloat(height), g('w'+i+'-framecolor'));
+        if (colorDeltaT) { const cp = calcWindowPrice(colorDeltaT*qty); productCostTotal += colorDeltaT*qty; windowsTotal += cp.withMarkup; taxTotal += cp.tax; }
+      }
+      continue;
+    }
+    if (MULL_TYPES.includes(type)) {
+      const mullMatch = findPrice('MULL',0,height,null);
+      if (!mullMatch) continue;
+      const p = calcWindowPrice(mullMatch.cost);
+      productCostTotal += mullMatch.cost*qty;
+      windowsTotal += p.withMarkup*qty;
+      taxTotal += p.tax*qty;
+      continue;
+    }
+    if (COMBO_TYPES.includes(type)) {
+      const baseType = type.replace('COMBO_','');
+      const units = parseInt(g('w'+i+'-combounits'))||2;
+      const unitWidth = width/units;
+      const unitMatch = findPrice(baseType,unitWidth,height,null);
+      const mullMatch = findPrice('MULL',0,height,null);
+      if (!unitMatch) continue;
+      const mullCost = mullMatch?mullMatch.cost:91.30;
+      const totalPGT = (unitMatch.cost*units)+(mullCost*(units-1));
+      const p = calcWindowPrice(totalPGT);
+      productCostTotal += totalPGT*qty;
+      windowsTotal += p.withMarkup*qty;
+      taxTotal += p.tax*qty;
+      laborTotal += (parseFloat(g('labor'))||497.77)*units*qty;
+      continue;
+    }
+    // PW5520 — tier pricing, handle before findPrice
+    if (type === 'PW5520') {
+      const result = findPW5520Price(parseFloat(width), parseFloat(height));
+      if (!result) continue;
+      const p = calcWindowPrice(result.cost, type);
+      productCostTotal += result.cost*qty;
+      windowsTotal += p.withMarkup*qty;
+      taxTotal += p.tax*qty;
+      laborTotal += (parseFloat(g('labor'))||497.77)*qty;
+      laborTotal += parseFloat(g('w'+i+'-adder'))||0;
+      const gridCostT = parseFloat(g('w'+i+'-grid'))||0;
+      if (gridCostT) { const gp = calcWindowPrice(gridCostT*qty); productCostTotal += gridCostT*qty; windowsTotal += gp.withMarkup; taxTotal += gp.tax; }
+      const pwColorDelta = findPW5520ColorDelta(parseFloat(width), parseFloat(height), g('w'+i+'-framecolor'));
+      if (pwColorDelta) { const cp = calcWindowPrice(pwColorDelta*qty); productCostTotal += pwColorDelta*qty; windowsTotal += cp.withMarkup; taxTotal += cp.tax; }
+      continue;
+    }
+    const match = findPrice(type,width,height,cfg);
+    if (!match) {
+      continue;
+    }
+    const p = calcWindowPrice(match.cost, type);
+    productCostTotal += match.cost*qty;
+    windowsTotal += p.withMarkup*qty;
+    taxTotal += p.tax*qty;
+    laborTotal += getLaborCost(type,cfg,qty);
+    laborTotal += parseFloat(g('w'+i+'-adder'))||0;
+    laborTotal += getWoodTotal(i);
+    // Grid add-on
+    const gridCostT = parseFloat(g('w'+i+'-grid'))||0;
+    if (gridCostT) { const gp = calcWindowPrice(gridCostT*qty); productCostTotal += gridCostT*qty; windowsTotal += gp.withMarkup; taxTotal += gp.tax; }
+    // Bronze/White color upcharge
+    const colorDeltaT = findColorDelta(type, parseFloat(width), parseFloat(height), g('w'+i+'-framecolor'));
+    if (colorDeltaT) { const cp = calcWindowPrice(colorDeltaT*qty); productCostTotal += colorDeltaT*qty; windowsTotal += cp.withMarkup; taxTotal += cp.tax; }
+    const reinCostT = getReinforcement(i);
+    if (reinCostT) { const rp = calcWindowPrice(reinCostT*qty); productCostTotal += reinCostT*qty; windowsTotal += rp.withMarkup; taxTotal += rp.tax; }
+    const dhDeltaT = getDHDeltaForWindow(i);
+    if (dhDeltaT) { const dp = calcWindowPrice(dhDeltaT*qty); productCostTotal += dhDeltaT*qty; windowsTotal += dp.withMarkup; taxTotal += dp.tax; }
+    const scrQty=parseInt(g('w'+i+'-screenqty'))||0;
+    const scrUnitCost=parseFloat(g('w'+i+'-screenprice'))||0;
+    if(scrQty>0&&scrUnitCost>0){const sp=calcWindowPrice(scrUnitCost*scrQty);windowsTotal+=sp.withMarkup;taxTotal+=sp.tax;}
+  }
+
+  // BHI Doors
+  for (let i = 1; i <= doorCount; i++) {
+    if (!document.getElementById('door-'+i)) continue;
+    const modelKey = g('d'+i+'-model');
+    if (!modelKey) continue;
+    const entry = BHI_DOORS[modelKey];
+    if (!entry) continue;
+    const modelCost = modelKey === 'BHI_MANUAL' ? (parseFloat(g('d'+i+'-manualcost'))||0) : entry.modelCost;
+    if (!modelCost) continue;
+    const prefinish = parseFloat(g('d'+i+'-prefinish'))||424.50;
+    const totalBHI = applyPGTAdjust(modelCost + BHI_FIXED_ADDONS + prefinish, modelKey);
+    const markup = parseFloat(g('markup'))/100||0.3577;
+    const tax = parseFloat(g('taxRate'))/100||0.07;
+    const wm = totalBHI / (1 - markup);
+    const txAmt = wm * tax;
+    productCostTotal += totalBHI;
+    windowsTotal += wm;
+    taxTotal += txAmt;
+    laborTotal += parseFloat(g('fdLabor'))||1200;
+  }
+
+  const permit = parseFloat(g('permitCost'))||0;
+  const misc = parseFloat(g('miscCost'))||0;
+  calcInstallDays();
+  document.getElementById('totProductCost').textContent = fmt(productCostTotal);
+  document.getElementById('totWindows').textContent = fmt(windowsTotal);
+  document.getElementById('totTax').textContent = fmt(taxTotal);
+  document.getElementById('totLabor').textContent = fmt(laborTotal);
+  document.getElementById('totPermit').textContent = fmt(permit);
+  document.getElementById('totMisc').textContent = fmt(misc);
+  document.getElementById('totGrand').textContent = fmt(windowsTotal+taxTotal+laborTotal+permit+misc);
+}
+
+// ============================================================
+// BHI DOOR LOGIC
+// ============================================================
+let doorCount = 0;
+
+function addDoor(data) {
+  doorCount++;
+  const id = doorCount;
+  const div = document.createElement('div');
+  div.className = 'win-card';
+  div.id = 'door-' + id;
+  div.style.borderLeftColor = '#8a3a00';
+
+  const modelOpts = Object.entries(BHI_DOORS).map(([k,v]) =>
+    `<option value="${k}">${v.label}</option>`
+  ).join('');
+
+  div.innerHTML = `
+    <div class="win-header">
+      <span class="win-label" style="color:#8a3a00">🚪 Door ${id}</span>
+      <div style="display:flex;gap:8px">
+        <button class="del-btn" style="background:#fff3ee;color:#8a3a00;border-color:#8a3a00" onclick="duplicateDoor(${id})">Copy</button>
+        <button class="del-btn" onclick="removeDoor(${id})">Remove</button>
+      </div>
+    </div>
+    <div class="field">
+      <label>BHI Door Model</label>
+      <select id="d${id}-model" onchange="updateDoorPrice(${id})">
+        <option value="">-- select model --</option>
+        ${modelOpts}
+      </select>
+    </div>
+    <div class="config-field show" id="d${id}-manualfield" style="display:none">
+      <div class="field">
+        <label>Manual Door Model Cost $</label>
+        <input type="number" id="d${id}-manualcost" placeholder="BHI door model cost only" inputmode="decimal" step="0.01" oninput="updateDoorPrice(${id})">
+        <div class="settings-note">Add-ons ($194.25) + prefinish added automatically</div>
+      </div>
+      <div class="field">
+        <label>Description</label>
+        <input type="text" id="d${id}-manualdesc" placeholder="Door description..." autocomplete="off">
+      </div>
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label>Handing</label>
+        <select id="d${id}-handing">
+          <option value="L-H Outswing">L-H Outswing</option>
+          <option value="R-H Outswing">R-H Outswing</option>
+          <option value="L-H Inswing">L-H Inswing</option>
+          <option value="R-H Inswing">R-H Inswing</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Prefinish $</label>
+        <select id="d${id}-prefinish" onchange="updateDoorPrice(${id})">
+          <option value="424.50">No Glass — $424.50</option>
+          <option value="606.75">w/Glass 6/8 — $606.75</option>
+          <option value="711.25">w/Glass 8/0 — $711.25</option>
+        </select>
+      </div>
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label>Room</label>
+        <select id="d${id}-room">
+          <option value="">-- room --</option>
+          <option value="Foyer/Entry">Foyer/Entry</option><option value="Living Room">Living Room</option><option value="Dining Room">Dining Room</option><option value="Kitchen">Kitchen</option><option value="Main Bedroom">Main Bedroom</option><option value="Bedroom 2">Bedroom 2</option><option value="Bedroom 3">Bedroom 3</option><option value="Garage">Garage</option><option value="Lanai/Patio">Lanai/Patio</option><option value="Other">Other</option>
+        </select>
+      </div>
+      <div class="field"><label>Notes</label><input type="text" id="d${id}-notes" placeholder="Notes..." autocomplete="off"></div>
+    </div>
+    <div class="price-box" id="d${id}-pricebox"></div>
+  `;
+  document.getElementById('doorList').appendChild(div);
+
+  if (data) {
+    if (data.model) set('d'+id+'-model', data.model);
+    if (data.manualcost) set('d'+id+'-manualcost', data.manualcost);
+    if (data.manualdesc) set('d'+id+'-manualdesc', data.manualdesc);
+    if (data.handing) set('d'+id+'-handing', data.handing);
+    if (data.prefinish) set('d'+id+'-prefinish', data.prefinish);
+    if (data.room) set('d'+id+'-room', data.room);
+    if (data.notes) set('d'+id+'-notes', data.notes);
+    updateDoorPrice(id);
+  } else {
+    div.scrollIntoView({behavior:'smooth', block:'start'});
+  }
+}
+
+function updateDoorPrice(id) {
+  const modelKey = g('d'+id+'-model');
+  const box = document.getElementById('d'+id+'-pricebox');
+  const manualField = document.getElementById('d'+id+'-manualfield');
+
+  // Show/hide manual cost field
+  const isManual = modelKey === 'BHI_MANUAL';
+  if (manualField) manualField.style.display = isManual ? 'block' : 'none';
+
+  if (!modelKey) { box.classList.remove('show'); updateTotals(); return; }
+
+  const entry = BHI_DOORS[modelKey];
+  if (!entry) { box.classList.remove('show'); updateTotals(); return; }
+
+  const modelCost = isManual
+    ? (parseFloat(g('d'+id+'-manualcost')) || 0)
+    : entry.modelCost;
+
+  if (!modelCost) { box.innerHTML = '<div class="price-nomatch">Enter door model cost</div>'; box.classList.add('show'); updateTotals(); return; }
+
+  const prefinish = parseFloat(g('d'+id+'-prefinish')) || 424.50;
+  const totalBHICost = applyPGTAdjust(modelCost + BHI_FIXED_ADDONS + prefinish);
+  const markup = parseFloat(g('markup'))/100 || 0.3577;
+  const tax = parseFloat(g('taxRate'))/100 || 0.07;
+  const withMarkup = totalBHICost / (1 - markup);
+  const taxAmt = withMarkup * tax;
+  const labor = parseFloat(g('fdLabor')) || 1200;
+  const lineTotal = withMarkup + taxAmt + labor;
+  const handing = g('d'+id+'-handing');
+
+  box.innerHTML = `
+    <div class="price-row"><span>Door Model cost (BHI)</span><span>${fmt(modelCost)}</span></div>
+    <div class="price-row"><span>Add-ons (Bore + Cutdown + Frame)</span><span>${fmt(BHI_FIXED_ADDONS)}</span></div>
+    <div class="price-row"><span>Prefinish</span><span>${fmt(prefinish)}</span></div>
+    <div class="price-row"><span>Total BHI cost</span><span>${fmt(modelCost + BHI_FIXED_ADDONS + prefinish)}</span></div>
+    <div class="price-row"><span>After markup (${g('markup')||35.77}%)</span><span>${fmt(withMarkup)}</span></div>
+    <div class="price-row"><span>Tax (${g('taxRate')||7}%)</span><span>${fmt(taxAmt)}</span></div>
+    <div class="price-row"><span>Labor</span><span>${fmt(labor)}</span></div>
+    <div class="price-row total"><span>Line Total</span><span>${fmt(lineTotal)}</span></div>
+    <div class="match-note">${handing}${isManual ? ' · Manual entry' : ''}</div>
+  `;
+  box.classList.add('show');
+  updateTotals();
+}
+
+function removeDoor(id) { const el=document.getElementById('door-'+id); if(el) el.remove(); renumberDoors(); updateTotals(); }
+function renumberDoors() { document.querySelectorAll('#doorList .win-card').forEach((c,i)=>{ const l=c.querySelector('.win-label'); if(l) l.textContent='🚪 Door '+(i+1); }); }
+function duplicateDoor(id) {
+  addDoor({
+    model: g('d'+id+'-model'), manualcost: g('d'+id+'-manualcost'), manualdesc: g('d'+id+'-manualdesc'),
+    handing: g('d'+id+'-handing'), prefinish: g('d'+id+'-prefinish'), room: g('d'+id+'-room'), notes: g('d'+id+'-notes')
+  });
+  showToast('Door duplicated!');
+}
+
+function collectDoors() {
+  const doors = [];
+  for (let i = 1; i <= doorCount; i++) {
+    if (!document.getElementById('door-'+i)) continue;
+    doors.push({
+      model: g('d'+i+'-model'), manualcost: g('d'+i+'-manualcost'), manualdesc: g('d'+i+'-manualdesc'),
+      handing: g('d'+i+'-handing'), prefinish: g('d'+i+'-prefinish'), room: g('d'+i+'-room'), notes: g('d'+i+'-notes')
+    });
+  }
+  return doors;
+}
+
+function buildTypeDropdownItems(id, filter) {
+  const dd = document.getElementById('w'+id+'-typedropdown');
+  if (!dd) return;
+  const q = (filter||'').toLowerCase();
+  const items = Object.entries(typeLabels)
+    .filter(([k,v]) => !q || v.toLowerCase().includes(q) || k.toLowerCase().includes(q))
+    .map(([k,v]) => `<div data-val="${k}" onmousedown="selectWindowType(${id},'${k}','${v.replace(/'/g,"&#39;")}')"
+      style="padding:10px 14px;cursor:pointer;font-size:0.97rem;border-bottom:1px solid #f0f0f0"
+      onmouseover="this.style.background='#f0f6ff'" onmouseout="this.style.background=''">${v}</div>`).join('');
+  dd.innerHTML = items || '<div style="padding:10px 14px;color:#999;font-size:0.9rem">No match</div>';
+}
+
+function showTypeDropdown(id) {
+  buildTypeDropdownItems(id, document.getElementById('w'+id+'-typesearch').value);
+  document.getElementById('w'+id+'-typedropdown').style.display = 'block';
+}
+
+function hideTypeDropdown(id) {
+  const dd = document.getElementById('w'+id+'-typedropdown');
+  if (dd) dd.style.display = 'none';
+}
+
+function filterTypeDropdown(id) {
+  buildTypeDropdownItems(id, document.getElementById('w'+id+'-typesearch').value);
+  document.getElementById('w'+id+'-typedropdown').style.display = 'block';
+}
+
+function selectWindowType(id, val, label) {
+  document.getElementById('w'+id+'-type').value = val;
+  document.getElementById('w'+id+'-typesearch').value = label;
+  hideTypeDropdown(id);
+  updatePrice(id);
+}
+
+function typeSearchKey(e, id) {
+  const dd = document.getElementById('w'+id+'-typedropdown');
+  if (!dd) return;
+  const items = dd.querySelectorAll('[data-val]');
+  if (e.key === 'Enter' && items.length > 0) {
+    const first = items[0];
+    selectWindowType(id, first.dataset.val, first.textContent);
+  }
+  if (e.key === 'Escape') hideTypeDropdown(id);
+}
+
+function addWindow(data) {
+  winCount++;
+  const id = winCount;
+  const displayNum = document.querySelectorAll('.win-card').length + 1;
+  const div = document.createElement('div');
+  div.className='win-card'; div.id='win-'+id;
+  const typeOpts = Object.entries(typeLabels).map(([k,v])=>`<option value="${k}">${v}</option>`).join('');
+  div.innerHTML = `
+    <div class="win-header">
+      <span class="win-label">Window ${displayNum}</span>
+      <div style="display:flex;gap:8px">
+        <button class="del-btn" style="background:var(--blue-light);color:var(--blue);border-color:var(--blue)" onclick="duplicateWin(${id})">Copy</button>
+        <button class="del-btn" onclick="removeWin(${id})">Remove</button>
+      </div>
+    </div>
+    <div class="field">
+      <label>Window Type</label>
+      <div style="position:relative">
+        <input type="text" id="w${id}-typesearch" placeholder="Search type..." autocomplete="off"
+          style="width:100%;min-height:44px;padding:0 14px;border:1.5px solid var(--border);border-radius:10px;font-size:1rem;box-sizing:border-box"
+          oninput="filterTypeDropdown(${id})"
+          onfocus="showTypeDropdown(${id})"
+          onblur="setTimeout(()=>hideTypeDropdown(${id}),180)"
+          onkeydown="typeSearchKey(event,${id})">
+        <div id="w${id}-typedropdown" style="display:none;position:absolute;z-index:999;width:100%;max-height:240px;overflow-y:auto;background:#fff;border:1.5px solid var(--border);border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,0.12);margin-top:2px"></div>
+        <input type="hidden" id="w${id}-type" value="">
+      </div>
+    </div>
+    <div class="config-field" id="w${id}-configfield">
+      <div class="field">
+        <label>Panel Configuration</label>
+        <select id="w${id}-config" onchange="updatePrice(${id})">
+          <option value="">-- config --</option>
+        </select>
+      </div>
+      <div class="field" id="w${id}-screenfield" style="display:none">
+        <label>Screens</label>
+        <div class="row2">
+          <input type="number" id="w${id}-screenqty" value="0" min="0" inputmode="numeric" placeholder="Qty" onchange="updatePrice(${id})" style="min-height:44px;font-size:1rem;padding:0 14px;border:1.5px solid var(--border);border-radius:10px">
+          <select id="w${id}-screenprice" onchange="document.getElementById('w${id}-screenprice').dataset.manual='1';updatePrice(${id})" style="min-height:44px;font-size:0.95rem">
+            <option value="0">No Screen</option>
+            <option value="222">79" — $222/screen</option>
+            <option value="242">96" — $242/screen</option>
+          </select>
+        </div>
+        <div class="settings-note" style="margin-top:4px">Auto-selects by height · markup & tax applied</div>
+      </div>
+      <div class="field" id="w${id}-pocketsidefield" style="display:none">
+        <label>Pocket Side</label>
+        <div class="row2">
+          <button type="button" id="w${id}-pocketleft" onclick="setPocketSide(${id},'Left')"
+            style="min-height:44px;border-radius:10px;border:1.5px solid var(--border);background:#fff;font-size:0.95rem;font-weight:600;cursor:pointer">
+            ← Left
+          </button>
+          <button type="button" id="w${id}-pocketright" onclick="setPocketSide(${id},'Right')"
+            style="min-height:44px;border-radius:10px;border:1.5px solid var(--border);background:#fff;font-size:0.95rem;font-weight:600;cursor:pointer">
+            Right →
+          </button>
+        </div>
+        <input type="hidden" id="w${id}-pocketside" value="Left">
+      </div>
+    </div>
+    <div class="config-field" id="w${id}-miscfield">
+      <div class="row2">
+        <div class="field">
+          <label>Item Cost $</label>
+          <input type="number" id="w${id}-misccost" placeholder="0.00" inputmode="decimal" step="0.01" oninput="updatePrice(${id})">
+          <div class="settings-note">Before markup & tax</div>
+        </div>
+        <div class="field">
+          <label>Labor $</label>
+          <input type="number" id="w${id}-misclabor" placeholder="0.00" inputmode="decimal" step="0.01" oninput="updatePrice(${id})">
+          <div class="settings-note">Added to line total</div>
+        </div>
+      </div>
+      <div class="field">
+        <label>Description</label>
+        <input type="text" id="w${id}-miscdesc" placeholder="e.g. Picture window 48x60, custom unit..." autocomplete="off">
+      </div>
+    </div>
+    <div class="config-field" id="w${id}-combofield">
+      <div class="field">
+        <label>Number of Units in Combo</label>
+        <select id="w${id}-combounits" onchange="updatePrice(${id})">
+          <option value="2">2 Unit</option>
+          <option value="3">3 Unit</option>
+        </select>
+      </div>
+    </div>
+    <div class="config-field" id="w${id}-legfield">
+      <div class="field">
+        <label>Leg Height</label>
+        <input type="number" id="w${id}-leg" placeholder='e.g. 6"' inputmode="decimal" step="0.25" oninput="updatePrice(${id})">
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 60px;gap:8px">
+      <div class="field"><label>Width</label>
+        <select id="w${id}-width-sel" onchange="dimSelChange('w${id}-width-sel','w${id}-width');updatePrice(${id});if(this.value&&this.value!=='custom'){setTimeout(function(){var h=document.getElementById('w${id}-height-sel');if(!h)return;h.focus();try{h.click();}catch(e){}h.scrollIntoView({behavior:'smooth',block:'center'});h.style.outline='3px solid #e63946';setTimeout(function(){h.style.outline='';},1200);},80);}" style="min-height:44px;font-size:0.95rem;width:100%;margin-bottom:5px">
+          <option value="">-- common --</option>
+          <option value="18.125">18.125"</option><option value="25.5">25.5"</option><option value="36">36"</option><option value="47">47"</option><option value="52.125">52.125"</option><option value="60">60"</option><option value="72">72"</option><option value="73">73"</option><option value="96">96"</option><option value="105">105"</option><option value="109">109"</option><option value="110">110"</option><option value="120">120"</option><option value="143">143"</option><option value="144">144"</option>
+        </select>
+        <div class="mic-row">
+          <input type="number" id="w${id}-width" placeholder='W"' inputmode="decimal" step="0.125" style="flex:1;min-height:50px;font-size:1.1rem;font-weight:700;padding:0 10px;border:2px solid var(--blue);border-radius:10px" oninput="updatePrice(${id})">
+          <button class="mic-btn" onclick="startMic('w${id}-width',${id})">🎤</button>
+        </div>
+      </div>
+      <div class="field"><label>Height</label>
+        <select id="w${id}-height-sel" onchange="dimSelChange('w${id}-height-sel','w${id}-height');updatePrice(${id})" style="min-height:44px;font-size:0.95rem;width:100%;margin-bottom:5px">
+          <option value="">-- common --</option>
+          <option value="25">25"</option><option value="37">37"</option><option value="49">49"</option><option value="49.5">49.5"</option><option value="62">62"</option><option value="75">75"</option><option value="79">79"</option><option value="95">95"</option><option value="96">96"</option>
+        </select>
+        <div class="mic-row">
+          <input type="number" id="w${id}-height" placeholder='H"' inputmode="decimal" step="0.125" style="flex:1;min-height:50px;font-size:1.1rem;font-weight:700;padding:0 10px;border:2px solid var(--blue);border-radius:10px" oninput="updatePrice(${id})">
+          <button class="mic-btn" onclick="startMic('w${id}-height',${id})">🎤</button>
+        </div>
+      </div>
+      <div class="field"><label>Qty</label><input type="number" id="w${id}-qty" value="1" min="1" inputmode="numeric" onchange="updatePrice(${id})"></div>
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label>Room</label>
+        <select id="w${id}-room">
+          <option value="">-- room --</option>
+          <option value="Living Room">Living Room</option><option value="Dining Room">Dining Room</option><option value="Kitchen">Kitchen</option><option value="Main Bedroom">Main Bedroom</option><option value="Bedroom 2">Bedroom 2</option><option value="Bedroom 3">Bedroom 3</option><option value="Bedroom 4">Bedroom 4</option><option value="Main Bath">Main Bath</option><option value="Bathroom 2">Bathroom 2</option><option value="Bathroom 3">Bathroom 3</option><option value="Office">Office</option><option value="Laundry">Laundry</option><option value="Garage">Garage</option><option value="Lanai/Patio">Lanai/Patio</option><option value="Foyer/Entry">Foyer/Entry</option><option value="Hallway">Hallway</option><option value="Stairwell">Stairwell</option><option value="Bonus Room">Bonus Room</option><option value="Nook">Nook</option><option value="Other">Other</option>
+        </select>
+      </div>
+      <div class="field"><label>Notes</label><input type="text" id="w${id}-notes" placeholder="Notes..." autocomplete="off"></div>
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label>Glass</label>
+        <select id="w${id}-glass">
+          <option value="Clear">Clear</option>
+          <option value="Low-E">Low-E</option>
+          <option value="Tinted">Tinted</option>
+          <option value="OBS">OBS (Obscure)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Frame Color</label>
+        <select id="w${id}-framecolor" onchange="updatePrice(${id})">
+          <option value="White">White</option>
+          <option value="Bronze">Bronze</option>
+          <option value="Bronze/White">Bronze/White</option>
+          <option value="Almond">Almond</option>
+          <option value="Black">Black</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
+      <button onclick="toggleGrid(${id})" id="w${id}-gridbtn" style="min-height:44px;padding:0 16px;background:#e8f5ed;color:#1a8a4a;border:1.5px solid #1a8a4a;border-radius:10px;font-size:0.85rem;font-weight:600;cursor:pointer">+ Grid $</button>
+      <button onclick="toggleAdder(${id})" id="w${id}-adderbtn" style="min-height:44px;padding:0 16px;background:#fff8e8;color:#8a5a00;border:1.5px solid #b87c00;border-radius:10px;font-size:0.85rem;font-weight:600;cursor:pointer">+ Add $</button>
+      <button onclick="toggleReinforcement(${id})" id="w${id}-reinbtn" style="min-height:44px;padding:0 16px;background:#eef0f8;color:#1a2a6c;border:1.5px solid #1a2a6c;border-radius:10px;font-size:0.85rem;font-weight:600;cursor:pointer">+ Reinforcement</button>
+      <button onclick="toggleWood(${id})" id="w${id}-woodbtn" style="min-height:44px;padding:0 16px;background:#f5f0e8;color:#5a3e00;border:1.5px solid #8a6a00;border-radius:10px;font-size:0.85rem;font-weight:600;cursor:pointer">+ Wood Trim</button>
+      <button onclick="toggleDH(${id})" id="w${id}-dhbtn" style="min-height:44px;padding:0 16px;background:#f0f8ff;color:#006080;border:1.5px solid #006080;border-radius:10px;font-size:0.85rem;font-weight:600;cursor:pointer;grid-column:span 2">+ Double Hung Upgrade</button>
+    </div>
+    <div style="display:none" id="w${id}-gridfield">
+      <input type="number" id="w${id}-grid" placeholder="Grid add-on cost $" inputmode="decimal" step="0.01" oninput="delete document.getElementById('w${id}-grid').dataset.auto; updatePrice(${id})" style="width:100%;min-height:44px;font-size:1rem;padding:0 14px;border:1.5px solid #1a8a4a;border-radius:10px;margin-top:6px">
+      <div class="settings-note" id="w${id}-gridnote" style="display:none;font-size:0.75rem;color:var(--muted)">PGT delta · margin & tax applied</div>
+    </div>
+    <div style="display:none" id="w${id}-adderfield">
+      <input type="number" id="w${id}-adder" placeholder="Extra charge $" inputmode="decimal" step="0.01" oninput="updatePrice(${id})" style="width:100%;min-height:44px;font-size:1rem;padding:0 14px;border:1.5px solid #b87c00;border-radius:10px;margin-top:6px">
+      <input type="text" id="w${id}-adderdesc" placeholder="Reason..." autocomplete="off" style="width:100%;min-height:44px;font-size:0.9rem;padding:0 14px;border:1.5px solid var(--border);border-radius:10px;margin-top:6px">
+    </div>
+    <div class="settings-note" id="w${id}-reinnote" style="display:none;font-size:0.75rem;color:var(--muted);margin-top:4px"></div>
+    <div style="display:none" id="w${id}-woodfield">
+      <input type="number" id="w${id}-woodlf" placeholder="LF (auto-calculated)" inputmode="decimal" step="0.01" oninput="updatePrice(${id})" style="width:100%;min-height:44px;font-size:1rem;padding:0 14px;border:1.5px solid #8a6a00;border-radius:10px;margin-top:6px">
+      <div class="settings-note" id="w${id}-woodnote" style="color:#5a3e00;margin-top:4px"></div>
+    </div>
+    <div class="price-box" id="w${id}-pricebox"></div>
+  `;
+  document.getElementById('windowList').appendChild(div);
+
+  if (data) {
+    set('w'+id+'-type', data.type);
+    if (data.type && typeLabels[data.type]) { const ts = document.getElementById('w'+id+'-typesearch'); if(ts) ts.value = typeLabels[data.type]; }
+    set('w'+id+'-width', data.width);
+    set('w'+id+'-height', data.height);
+    set('w'+id+'-qty', data.qty);
+    set('w'+id+'-notes', data.notes);
+    // Config needs to be set after type triggers the dropdown population
+    if (data.combounits) set('w'+id+'-combounits', data.combounits);
+    if (data.leg) set('w'+id+'-leg', data.leg);
+    if (data.room) set('w'+id+'-room', data.room);
+    if (data.width) { set('w'+id+'-width', data.width); }
+    if (data.height) { set('w'+id+'-height', data.height); }
+    if (data.misccost) set('w'+id+'-misccost', data.misccost);
+    if (data.misclabor) set('w'+id+'-misclabor', data.misclabor);
+    if (data.miscdesc) set('w'+id+'-miscdesc', data.miscdesc);
+    if (data.adder) { set('w'+id+'-adder', data.adder); set('w'+id+'-adderdesc', data.adderdesc||''); toggleAdder(id); }
+    if (data.grid) { set('w'+id+'-grid', data.grid); toggleGrid(id); }
+    if (data.woodlf) { toggleWood(id); set('w'+id+'-woodlf', data.woodlf); }
+    if (data.reinforcement === '1') toggleReinforcement(id);
+    if (data.dh === '1') toggleDH(id);
+    if (data.glass) set('w'+id+'-glass', data.glass);
+    if (data.framecolor) set('w'+id+'-framecolor', data.framecolor);
+    if (data.screen) set('w'+id+'-screen', data.screen);
+    if (data.screenqty) set('w'+id+'-screenqty', data.screenqty);
+    if (data.config) setTimeout(() => { set('w'+id+'-config', data.config); updatePrice(id); }, 50);
+    else updatePrice(id);
+  } else {
+    div.scrollIntoView({behavior:'smooth',block:'start'});
+  }
+}
+
+
+
+// Reinforcement PGT cost add-ons — markup & tax applied
+// SH5500: keyed by WIDTH. HR5510: keyed by HEIGHT.
+// H=62 and H=75 on HR come reinforced — baked into base price, no toggle needed.
+const REINFORCEMENT_COST = {
+  'SH5500': [
+    {dim:18,   cost:11.79},
+    {dim:25,   cost:14.15},
+    {dim:37,   cost:16.51},
+    {dim:47,   cost:26.79},
+    {dim:52,   cost:35.59}
+  ],
+  'HR5510': [
+    {dim:16.25, cost:27.00},
+    {dim:25,    cost:27.00},
+    {dim:37,    cost:30.97},
+    {dim:49,    cost:34.14}
+    // H=62 and H=75 omitted — reinforcement baked into base price
+  ]
+};
+
+function toggleReinforcement(id) {
+  const btn = document.getElementById('w'+id+'-reinbtn');
+  const note = document.getElementById('w'+id+'-reinnote');
+  const active = btn.dataset.active === '1';
+  btn.dataset.active = active ? '0' : '1';
+  btn.style.background = active ? '#eef0f8' : '#1a2a6c';
+  btn.style.color = active ? '#1a2a6c' : '#fff';
+  btn.textContent = active ? '+ Reinforcement' : '✓ Reinforcement';
+  if (note) note.textContent = active ? '' : 'PGT cost · markup & tax applied';
+  updatePrice(id);
+}
+
+function getReinforcement(id) {
+  const btn = document.getElementById('w'+id+'-reinbtn');
+  if (!btn || btn.dataset.active !== '1') return 0;
+  const type = g('w'+id+'-type');
+  const table = REINFORCEMENT_COST[type];
+  if (!table) return 0;
+  // SH5500 keys on width, HR5510 keys on height
+  const dim = type === 'SH5500'
+    ? getDimValue('w'+id+'-width-sel','w'+id+'-width')
+    : getDimValue('w'+id+'-height-sel','w'+id+'-height');
+  if (!dim) return 0;
+  const tol = 2;
+  let best = null, bestDist = Infinity;
+  for (const item of table) {
+    const d = Math.abs(item.dim - dim);
+    if (d <= tol && d < bestDist) { bestDist = d; best = item; }
+  }
+  return best ? best.cost : 0;
+}
+
+function toggleDH(id) {
+  const btn = document.getElementById('w'+id+'-dhbtn');
+  if (!btn) return;
+  const active = btn.dataset.active === '1';
+  btn.dataset.active = active ? '0' : '1';
+  btn.style.background = active ? '#f0f8ff' : '#006080';
+  btn.style.color = active ? '#006080' : '#fff';
+  btn.textContent = active ? '+ Double Hung Upgrade' : '✓ Double Hung Upgrade';
+  updatePrice(id);
+}
+
+function getDHDeltaForWindow(id) {
+  const btn = document.getElementById('w'+id+'-dhbtn');
+  if (!btn || btn.dataset.active !== '1') return 0;
+  const type = g('w'+id+'-type');
+  if (type !== 'SH5500') return 0;
+  const width = getDimValue('w'+id+'-width-sel','w'+id+'-width');
+  const height = getDimValue('w'+id+'-height-sel','w'+id+'-height');
+  return findDHDelta(parseFloat(width), parseFloat(height)) || 0;
+}
+
+function toggleWood(id) {
+  const field = document.getElementById('w'+id+'-woodfield');
+  const btn = document.getElementById('w'+id+'-woodbtn');
+  if (!field) return;
+  const showing = field.style.display !== 'none';
+  field.style.display = showing ? 'none' : 'block';
+  if (btn) btn.textContent = showing ? '+ Wood Trim' : '✕ No Trim';
+  if (!showing) { autoFillWoodLF(id); }
+  if (showing) { set('w'+id+'-woodlf',''); updatePrice(id); }
+}
+
+function autoFillWoodLF(id) {
+  const width = getDimValue('w'+id+'-width-sel','w'+id+'-width');
+  const height = getDimValue('w'+id+'-height-sel','w'+id+'-height');
+  const qty = parseInt(g('w'+id+'-qty'))||1;
+  const note = document.getElementById('w'+id+'-woodnote');
+  if (width && height) {
+    const lfEach = ((width/12)*2) + ((height/12)*2);
+    const lfTotal = lfEach * qty * 1.1;
+    set('w'+id+'-woodlf', lfTotal.toFixed(2));
+    if (note) note.textContent = `${width}" × ${height}" = ${lfEach.toFixed(2)} LF/window × ${qty} × 1.1 waste = ${lfTotal.toFixed(2)} LF`;
+    updatePrice(id);
+  }
+}
+
+function getWoodTotal(id) {
+  const field = document.getElementById('w'+id+'-woodfield');
+  if (!field || field.style.display === 'none') return 0;
+  const lf = parseFloat(g('w'+id+'-woodlf'))||0;
+  const costPerLF = parseFloat(g('woodCostPerLF'))||5.81;
+  const laborPerWin = parseFloat(g('woodLaborPerWin'))||100;
+  const qty = parseInt(g('w'+id+'-qty'))||1;
+  return (lf * costPerLF) + (laborPerWin * qty);
+}
+
+function toggleAdder(id) {
+  const field = document.getElementById('w'+id+'-adderfield');
+  const btn = document.getElementById('w'+id+'-adderbtn');
+  if (!field) return;
+  const showing = field.style.display !== 'none';
+  field.style.display = showing ? 'none' : 'block';
+  if (btn) btn.textContent = showing ? '+ Add $' : '✕ Remove';
+  if (!showing) document.getElementById('w'+id+'-adder').focus();
+  if (showing) { set('w'+id+'-adder',''); updatePrice(id); }
+}
+function toggleGrid(id) {
+  const field = document.getElementById('w'+id+'-gridfield');
+  const note = document.getElementById('w'+id+'-gridnote');
+  const btn = document.getElementById('w'+id+'-gridbtn');
+  if (!field) return;
+  const showing = field.style.display !== 'none';
+  field.style.display = showing ? 'none' : 'block';
+  if (note) note.style.display = showing ? 'none' : 'block';
+  if (btn) btn.textContent = showing ? '+ Grid $' : '✕ No Grid';
+  if (!showing) { autoFillGridDelta(id); document.getElementById('w'+id+'-grid').focus(); }
+  if (showing) { set('w'+id+'-grid',''); updatePrice(id); }
+}
+
+function autoFillGridDelta(id) {
+  const gridInput = document.getElementById('w'+id+'-grid');
+  if (!gridInput) return;
+  // Only auto-fill if empty or previously auto-filled
+  if (gridInput.value && !gridInput.dataset.auto) return;
+  const type = g('w'+id+'-type');
+  const width = getDimValue('w'+id+'-width-sel','w'+id+'-width');
+  const height = getDimValue('w'+id+'-height-sel','w'+id+'-height');
+  if (!type || !width || !height) return;
+  const delta = findGridDelta(type, parseFloat(width), parseFloat(height));
+  if (delta !== null) {
+    gridInput.value = delta.toFixed(2);
+    gridInput.dataset.auto = '1';
+    updatePrice(id);
+  }
+}
+function duplicateWin(id) {
+  const type = g('w'+id+'-type');
+  const cfg = g('w'+id+'-config');
+  const combounits = g('w'+id+'-combounits');
+  const leg = g('w'+id+'-leg');
+  const width = getDimValue('w'+id+'-width-sel','w'+id+'-width');
+  const height = getDimValue('w'+id+'-height-sel','w'+id+'-height');
+  const qty = g('w'+id+'-qty');
+  const room = g('w'+id+'-room');
+  const notes = g('w'+id+'-notes');
+  addWindow({type,config:cfg,combounits,leg,width,height,qty,room,notes});
+  showToast('Window duplicated!');
+}
+function removeWin(id) { const el=document.getElementById('win-'+id); if(el) el.remove(); renumber(); updateTotals(); }
+function renumber() { document.querySelectorAll('.win-card').forEach((c,i)=>{ const l=c.querySelector('.win-label'); if(l) l.textContent='Window '+(i+1); }); }
+function set(id,val) { const el=document.getElementById(id); if(el&&val!==undefined&&val!==null) el.value=val; }
+function g(id) { const el=document.getElementById(id); return el?el.value.trim():''; }
+
+function collectData() {
+  const wins=[];
+  for(let i=1;i<=winCount;i++) {
+    if(!document.getElementById('win-'+i)) continue;
+    wins.push({type:g('w'+i+'-type'),config:g('w'+i+'-config'),combounits:g('w'+i+'-combounits'),leg:g('w'+i+'-leg'),width:getDimValue('w'+i+'-width-sel','w'+i+'-width'),height:getDimValue('w'+i+'-height-sel','w'+i+'-height'),qty:g('w'+i+'-qty'),room:g('w'+i+'-room'),notes:g('w'+i+'-notes'),misccost:g('w'+i+'-misccost'),misclabor:g('w'+i+'-misclabor'),miscdesc:g('w'+i+'-miscdesc'),adder:g('w'+i+'-adder'),adderdesc:g('w'+i+'-adderdesc'),grid:g('w'+i+'-grid'),glass:g('w'+i+'-glass'),framecolor:g('w'+i+'-framecolor'),screen:g('w'+i+'-screen'),screenqty:g('w'+i+'-screenqty'),woodlf:g('w'+i+'-woodlf'),reinforcement:document.getElementById('w'+i+'-reinbtn')&&document.getElementById('w'+i+'-reinbtn').dataset.active==='1'?'1':'',dh:document.getElementById('w'+i+'-dhbtn')&&document.getElementById('w'+i+'-dhbtn').dataset.active==='1'?'1':''});
+  }
+  return {jobNum:g('jobNum'),jobDate:g('jobDate'),custName:g('custName'),custPhone:g('custPhone'),custAddr:g('custAddr'),jobNotes:g('jobNotes'),installDate:g('installDate'),installDays:g('installDays'),markup:g('markup'),taxRate:g('taxRate'),labor:g('labor'),sgdLabor:g('sgdLabor'),fdLabor:g('fdLabor'),tolerance:g('tolerance'),permitCost:g('permitCost'),miscCost:g('miscCost'),screenCost:g('screenCost'),windows:wins,doors:collectDoors(),savedAt:new Date().toLocaleString()};
+}
+
+function saveJob() { const d=collectData(); localStorage.setItem('est_'+(d.jobNum||Date.now()),JSON.stringify(d)); showToast('Estimate saved!'); }
+
+function exportJob() {
+  const d = collectData();
+  const name = (d.custName||'estimate').replace(/[^a-z0-9]/gi,'_').toLowerCase();
+  const jobNum = d.jobNum || Date.now();
+  const blob = new Blob([JSON.stringify(d, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `mullets_${name}_${jobNum}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  showToast('Estimate exported!');
+}
+
+function importJob(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (!data.windows && !data.custName) { showToast('Invalid estimate file.'); return; }
+      localStorage.setItem('est_'+(data.jobNum||Date.now()), JSON.stringify(data));
+      loadJobData(data);
+      showToast('Estimate imported!');
+    } catch(err) {
+      showToast('Could not read file.');
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+function getSaved() {
+  const jobs=[];
+  for(let i=0;i<localStorage.length;i++) { const k=localStorage.key(i); if(k&&k.startsWith('est_')) { try{jobs.push({key:k,data:JSON.parse(localStorage.getItem(k))});}catch(e){} } }
+  return jobs.sort((a,b)=>a.data.savedAt<b.data.savedAt?1:-1);
+}
+
+function openPanel() {
+  const jobs=getSaved();
+  const list=document.getElementById('savedList');
+  if(!jobs.length) { list.innerHTML='<div class="no-jobs">No saved estimates yet</div>'; }
+  else { list.innerHTML=jobs.map(j=>`<div class="saved-job"><div class="saved-job-info"><div class="saved-job-name">${j.data.custName||'No name'} &mdash; #${j.data.jobNum||'—'}</div><div class="saved-job-meta">${(j.data.windows||[]).length} window(s) &nbsp;&middot;&nbsp; ${j.data.savedAt}</div></div><div class="saved-job-btns"><button class="load-job-btn" onclick="loadJob('${j.key}')">Load</button><button class="del-job-btn" onclick="deleteJob('${j.key}')">Del</button></div></div>`).join(''); }
+  document.getElementById('overlay').classList.add('show');
+}
+
+function loadJobData(data) {
+  resetForm();
+  set('jobNum',data.jobNum); set('jobDate',data.jobDate); set('custName',data.custName); set('custPhone',data.custPhone); set('custAddr',data.custAddr);
+  if(data.jobNotes) set('jobNotes',data.jobNotes);
+  if(data.installDate) set('installDate',data.installDate);
+  if(data.installDays) set('installDays',data.installDays);
+  if(data.markup) set('markup',data.markup); if(data.taxRate) set('taxRate',data.taxRate);
+  if(data.labor) set('labor',data.labor); if(data.sgdLabor) set('sgdLabor',data.sgdLabor);
+  if(data.tolerance) set('tolerance',data.tolerance);
+  if(data.permitCost!==undefined) set('permitCost',data.permitCost);
+  if(data.miscCost!==undefined) set('miscCost',data.miscCost);
+  if(data.screenCost!==undefined) set('screenCost',data.screenCost);
+  if(data.pgtAdjust!==undefined) set('pgtAdjust',data.pgtAdjust);
+  if(data.sgdAdjust!==undefined) set('sgdAdjust',data.sgdAdjust);
+  (data.windows||[]).forEach(w=>addWindow(w));
+  (data.doors||[]).forEach(d=>addDoor(d));
+  closeOverlay(); window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function loadJob(key) {
+  const raw=localStorage.getItem(key); if(!raw) return;
+  const data=JSON.parse(raw);
+  loadJobData(data);
+  showToast('Estimate loaded!');
+}
+
+function deleteJob(key) { if(!confirm('Delete this saved estimate?')) return; localStorage.removeItem(key); openPanel(); }
+function closePanelClick(e) { if(e.target===document.getElementById('overlay')) closeOverlay(); }
+function closeOverlay() { document.getElementById('overlay').classList.remove('show'); }
+function clearAll() { if(!confirm('Clear everything and start a new estimate?')) return; resetForm(); showToast('Ready for new estimate'); }
+
+function resetForm() {
+  ['jobNum','jobDate','custName','custPhone','custAddr','jobNotes','installDays'].forEach(id=>set(id,''));
+  // Keep installDate — it's a forecast that doesn't change per job
+  document.getElementById('windowList').innerHTML='';
+  document.getElementById('doorList').innerHTML='';
+  winCount=0;
+  doorCount=0;
+  document.getElementById('jobDate').valueAsDate=new Date();
+  updateTotals();
+  addWindow();
+}
+
+function generateOutput() {
+  const data=collectData();
+  let out='=== Window Estimate ===\n';
+  out+=`Job #:    ${data.jobNum||'—'}\nDate:     ${data.jobDate||'—'}\nCustomer: ${data.custName||'—'}\nPhone:    ${data.custPhone||'—'}\nAddress:  ${data.custAddr||'—'}\n${data.jobNotes?'Notes:    '+data.jobNotes+'\n':''}\n--- Windows ---\n`;
+  (data.windows||[]).forEach((w,i)=>{
+    const match=findPrice(w.type,parseFloat(w.width)||0,parseFloat(w.height)||0,w.config);
+    const qty=parseInt(w.qty)||1;
+    out+=`\nWindow ${i+1}: ${typeLabels[w.type]||w.type}${w.config?' — '+w.config:''}\n`;
+    out+=`  Size: ${w.width}" W x ${w.height}" H  Qty: ${qty}  Glass: ${w.glass||'Clear'}  Frame: ${w.framecolor||'White'}${w.screen?' Screen: '+w.screen:''}\n`;
+    if(w.notes) out+=`  Notes: ${w.notes}\n`;
+    if(match) {
+      const p=calcWindowPrice(match.cost);
+      const labor=getLaborCost(w.type,w.config,qty);
+      const lineTotal=(p.withMarkup*qty)+(p.tax*qty)+labor;
+      out+=`  PGT Cost: ${fmt(match.cost)}  Customer Price: ${fmt(p.withTax)} each  Labor: ${fmt(labor)}  Line Total: ${fmt(lineTotal)}\n`;
+    } else { out+=`  No price match found\n`; }
+  });
+  out+=`\n--- Totals ---\n`;
+  out+=`Windows: ${document.getElementById('totWindows').textContent}\nTax:     ${document.getElementById('totTax').textContent}\nLabor:   ${document.getElementById('totLabor').textContent}\nPermit:  ${document.getElementById('totPermit').textContent}\nMisc:    ${document.getElementById('totMisc').textContent}\nTOTAL:   ${document.getElementById('totGrand').textContent}\n`;
+  if(navigator.clipboard) navigator.clipboard.writeText(out).then(()=>showToast('Copied!'));
+}
+
+function emailJob() {
+  const data=collectData();
+  const subject=encodeURIComponent(`Window Estimate — ${data.custName||'Customer'} #${data.jobNum||''}`);
+  let body=`Window Estimate\n\nJob #: ${data.jobNum||'—'}\nCustomer: ${data.custName||'—'}\nAddress: ${data.custAddr||'—'}\n\nWindows:\n`;
+  (data.windows||[]).forEach((w,i)=>{
+    const match=findPrice(w.type,parseFloat(w.width)||0,parseFloat(w.height)||0,w.config);
+    body+=`\n${i+1}. ${typeLabels[w.type]||w.type}${w.config?' — '+w.config:''} — ${w.width}" x ${w.height}" (qty: ${w.qty||1})`;
+    if(match){const p=calcWindowPrice(match.cost);const labor=getLaborCost(w.type,w.config,parseInt(w.qty)||1);body+=`\n   Line Total: ${fmt((p.withMarkup*(parseInt(w.qty)||1))+(p.tax*(parseInt(w.qty)||1))+labor)}`;}
+    if(w.notes) body+=`\n   ${w.notes}`;
+  });
+  body+=`\n\nPermit: ${document.getElementById('totPermit').textContent}\nMisc: ${document.getElementById('totMisc').textContent}\nTOTAL: ${document.getElementById('totGrand').textContent}`;
+  window.location.href=`mailto:?subject=${subject}&body=${encodeURIComponent(body)}`;
+}
+
+function showToast(msg) { const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2500); }
+
+['markup','taxRate','labor','sgdLabor','fdLabor','tolerance','permitCost','miscCost','screenCost','pgtAdjust','sgdAdjust','woodCostPerLF','woodLaborPerWin'].forEach(id=>{
+  const el = document.getElementById(id);
+  if(el) el.addEventListener('input',()=>{ for(let i=1;i<=winCount;i++){if(document.getElementById('win-'+i)) updatePrice(i);} for(let i=1;i<=doorCount;i++){if(document.getElementById('door-'+i)) updateDoorPrice(i);} });
+});
+
+
+function calcInstallDays() {
+  // Don't override if user manually set it
+  const field = document.getElementById('installDays');
+  if (field && field.dataset.manual === '1') return;
+  let windows = 0, doors = 0;
+  for (let i=1; i<=winCount; i++) {
+    if (!document.getElementById('win-'+i)) continue;
+    const type = g('w'+i+'-type');
+    if (!type) continue;
+    const qty = parseInt(g('w'+i+'-qty'))||1;
+    if (['SGD770NS','SGD5570NS','SGD5570','FD5555'].includes(type)) {
+      doors += qty;
+    } else if (['MULLBAR','MISC'].includes(type)) {
+      // don't count
+    } else {
+      windows += qty;
+    }
+  }
+  // BHI swing doors — 1 install day each
+  for (let i = 1; i <= doorCount; i++) {
+    if (document.getElementById('door-'+i) && g('d'+i+'-model')) doors++;
+  }
+  // 3-4 windows per day = use 3.5 average, round up
+  const windowDays = Math.ceil(windows / 3.5);
+  const doorDays = doors;
+  const total = Math.max(1, windowDays + doorDays);
+  set('installDays', total);
+  showToast(`Est. ${total} day${total>1?'s':''} — ${windows} window${windows!==1?'s':''}, ${doors} door${doors!==1?'s':''}`);
+}
+
+function checkPin() {
+  const pin = document.getElementById('pinInput').value.trim();
+  if (pin === '777') {
+    document.getElementById('lockScreen').style.display = 'none';
+    document.getElementById('appContent').style.display = 'block';
+    sessionStorage.setItem('estimator_unlocked','1');
+  } else {
+    const err = document.getElementById('pinError');
+    err.textContent = 'Incorrect PIN — try again';
+    document.getElementById('pinInput').value = '';
+    document.getElementById('pinInput').focus();
+    setTimeout(() => { err.textContent = ''; }, 2500);
+  }
+}
+
+// Check if already unlocked this session
+if (sessionStorage.getItem('estimator_unlocked') === '1') {
+  document.getElementById('lockScreen').style.display = 'none';
+  document.getElementById('appContent').style.display = 'block';
+}
+
+document.getElementById('installDays').addEventListener('input', function() {
+  this.dataset.manual = this.value ? '1' : '';
+});
+
+document.getElementById('jobDate').valueAsDate = new Date();
+addWindow();
+
+function dimSelChange(selId, inputId) {
+  const sel = document.getElementById(selId);
+  const input = document.getElementById(inputId);
+  if (!sel || !input) return;
+  if (sel.value) input.value = sel.value;
+}
+
+function getDimValue(selId, customId) {
+  // selId is now the -sel dropdown, customId is the actual input
+  const input = document.getElementById(customId);
+  return parseFloat(input ? input.value : 0) || 0;
+}
+
+
+
+// ============================================================
+// SVG WINDOW RENDERINGS
+// ============================================================
+function getSVG(type, cfg) {
+  const W = 120, H = 100;
+  const s = (inner) => `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${inner}</svg>`;
+  const frame = (x,y,w,h) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="none" stroke="#1a3a6c" stroke-width="3" rx="1"/>`;
+  const line = (x1,y1,x2,y2) => `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#1a3a6c" stroke-width="1.5"/>`;
+  const arrow = (x,y,dir) => dir==='right' ? `<path d="M${x},${y} L${x+10},${y} M${x+6},${y-4} L${x+10},${y} L${x+6},${y+4}" stroke="#1a6fc4" stroke-width="1.5" fill="none"/>` : `<path d="M${x},${y} L${x},${y+10} M${x-4},${y+6} L${x},${y+10} L${x+4},${y+6}" stroke="#1a6fc4" stroke-width="1.5" fill="none"/>`;
+
+  if (type==='SH5500'||type==='DH5560') {
+    // Single/Double hung - frame with center horizontal line
+    return s(frame(10,8,100,84) + line(10,50,110,50) + arrow(54,60,'down') +
+      `<text x="60" y="28" font-size="9" fill="#666" text-anchor="middle">FIXED</text>` +
+      `<text x="60" y="72" font-size="9" fill="#1a6fc4" text-anchor="middle">OPERABLE</text>`);
+  }
+  if (type==='HR5510') {
+    const isXOX = cfg==='XOX';
+    if (isXOX) {
+      return s(frame(5,8,110,84) + line(42,8,42,92) + line(78,8,78,92) +
+        `<text x="24" y="55" font-size="8" fill="#1a6fc4" text-anchor="middle">OPR</text>` +
+        `<text x="60" y="55" font-size="8" fill="#666" text-anchor="middle">FXD</text>` +
+        `<text x="92" y="55" font-size="8" fill="#1a6fc4" text-anchor="middle">OPR</text>` +
+        arrow(14,50,'right'));
+    }
+    return s(frame(5,8,110,84) + line(60,8,60,92) +
+      `<text x="32" y="55" font-size="9" fill="#1a6fc4" text-anchor="middle">OPR</text>` +
+      `<text x="88" y="55" font-size="9" fill="#666" text-anchor="middle">FXD</text>` +
+      arrow(18,50,'right'));
+  }
+  if (type==='PW5520'||type==='AR5520') {
+    return s(frame(10,8,100,84) +
+      line(10,8,110,92) + line(110,8,10,92) +
+      `<text x="60" y="55" font-size="9" fill="#666" text-anchor="middle">FIXED</text>`);
+  }
+  if (type==='AR5520_HC') {
+    return s(`<path d="M10,92 L10,55 A50,47 0 0,1 110,55 L110,92 Z" fill="none" stroke="#1a3a6c" stroke-width="3"/>` +
+      line(10,92,110,92) +
+      `<text x="60" y="80" font-size="9" fill="#666" text-anchor="middle">HALF CIRCLE</text>`);
+  }
+  if (type==='AR5520_EB') {
+    return s(`<path d="M10,92 L10,65 Q60,10 110,65 L110,92 Z" fill="none" stroke="#1a3a6c" stroke-width="3"/>` +
+      line(10,92,110,92) +
+      `<text x="60" y="82" font-size="9" fill="#666" text-anchor="middle">EYEBROW</text>`);
+  }
+  if (type==='FD5555') {
+    if (cfg==='XX') {
+      return s(frame(5,8,110,84) + line(60,8,60,92) +
+        `<circle cx="52" cy="50" r="3" fill="#1a3a6c"/>` +
+        `<circle cx="68" cy="50" r="3" fill="#1a3a6c"/>` +
+        `<text x="60" y="90" font-size="8" fill="#666" text-anchor="middle">DOUBLE DOOR</text>`);
+    }
+    return s(frame(10,8,100,84) +
+      `<circle cx="35" cy="50" r="4" fill="#1a3a6c"/>` +
+      `<path d="M39,50 Q70,30 70,50" fill="none" stroke="#1a3a6c" stroke-width="1.5" stroke-dasharray="4,2"/>` +
+      `<text x="60" y="90" font-size="8" fill="#666" text-anchor="middle">SINGLE DOOR</text>`);
+  }
+  if (type==='SGD770NS'||type==='SGD5570NS'||type==='SGD5570') {
+    const panels = cfg==='XXX'?3:cfg==='OXXO'?4:2;
+    const pw = 110/panels;
+    let inner = frame(5,8,110,84);
+    for(let i=1;i<panels;i++) inner += line(5+pw*i,8,5+pw*i,92);
+    // Arrow on first operable panel
+    inner += arrow(5+pw*0.3, 45, 'right');
+    if(cfg==='OXXO') {
+      inner += `<text x="${5+pw*0.5}" y="75" font-size="7" fill="#666" text-anchor="middle">FXD</text>`;
+      inner += `<text x="${5+pw*3.5}" y="75" font-size="7" fill="#666" text-anchor="middle">FXD</text>`;
+    }
+    inner += `<text x="60" y="95" font-size="7" fill="#666" text-anchor="middle">${cfg||'XX'} SLIDING DOOR</text>`;
+    return s(inner);
+  }
+  if (type==='COMBO_SH5500') {
+    return s(frame(5,8,50,84) + frame(65,8,50,84) +
+      line(5,50,55,50) + line(65,50,115,50) +
+      `<rect x="55" y="8" width="10" height="84" fill="#ddd" stroke="#999" stroke-width="1"/>` +
+      `<text x="60" y="97" font-size="7" fill="#666" text-anchor="middle">COMBO UNIT</text>`);
+  }
+  if (type==='MULLBAR') {
+    return s(`<rect x="52" y="5" width="16" height="90" fill="#ccc" stroke="#1a3a6c" stroke-width="2" rx="2"/>` +
+      `<text x="60" y="102" font-size="8" fill="#666" text-anchor="middle">MULL BAR</text>`);
+  }
+  // MISC / default
+  return s(`<rect x="10" y="8" width="100" height="84" fill="none" stroke="#999" stroke-width="2" stroke-dasharray="6,3" rx="4"/>` +
+    `<text x="60" y="55" font-size="11" fill="#999" text-anchor="middle">CUSTOM</text>`);
+}
+
+// Type descriptions
+const typeDescriptions = {
+  'SH5500': 'PGT Single Hung · Miami-Dade Certified · Vinyl Frame · Hurricane Laminated Insulating Glass · Clear (green exterior hue) · Energy Shield MAX Low-E · Argon Gas · No Grid · BetterVue Screen · Sweep Latch · DP50/50 · SHGC ≤0.25 · UF ≤0.65',
+  'DH5560': 'PGT Double Hung · Miami-Dade Certified · Vinyl Frame · Hurricane Laminated Insulating Glass · Clear · Energy Shield MAX Low-E · Argon Gas · No Grid · DP50/50 · SHGC ≤0.25 · UF ≤0.65',
+  'HR5510': 'PGT Horizontal Roller · Miami-Dade Certified · Vinyl Frame · Hurricane Laminated Insulating Glass · Clear (green exterior hue) · Energy Shield MAX Low-E · Argon Gas · No Grid · BetterVue Screen · Sweep Latch · DP50/50 · SHGC ≤0.25 · UF ≤0.65',
+  'PW5520': 'PGT Picture Window · Miami-Dade Certified · Vinyl Frame · Hurricane Laminated Insulating Glass · Clear (green exterior hue) · Energy Shield MAX Low-E · Argon Gas · No Grid · Fixed · DP50/50 · SHGC ≤0.25 · UF ≤0.65',
+  'AR5520': 'PGT Architectural Window · Miami-Dade Certified · Vinyl Frame · Hurricane Laminated Insulating Glass · Clear · Energy Shield MAX Low-E · Argon Gas · No Grid · Fixed · DP50/50',
+  'AR5520_HC': 'PGT Half Circle Architectural · Miami-Dade Certified · Vinyl Frame · Hurricane Laminated Insulating Glass · Clear · Energy Shield MAX Low-E · Argon Gas · No Grid · Fixed · DP50/50',
+  'AR5520_EB': 'PGT Eyebrow Architectural · Miami-Dade Certified · Vinyl Frame · Hurricane Laminated Insulating Glass · Clear · Energy Shield MAX Low-E · Argon Gas · No Grid · Fixed · DP50/50',
+  'FD5555': 'PGT French Door Series 5555 · Miami-Dade Certified · Vinyl Frame · Outswing · Hurricane Laminated Insulating Glass · Clear (green exterior hue) · Energy Shield MAX Low-E · Argon Gas · No Grid · Multi-Point Satin Handle · DP60/60 · SHGC ≤0.25 · UF ≤0.65',
+  'SGD770NS': 'PGT Sliding Glass Door 770NS · Miami-Dade Certified · Aluminum Frame · Bypass · Hurricane Laminated Insulating Glass · Clear (green exterior hue) · Energy Shield MAX Low-E · Argon Gas · No Grid · Stainless Steel Rollers · 3.25" Sill Riser · DP60/60 · SHGC ≤0.25 · UF ≤0.65',
+  'SGD5570NS': 'PGT Sliding Glass Door 5570NS · Miami-Dade Certified · Aluminum Frame · Hurricane Laminated Insulating Glass · Clear · Energy Shield MAX Low-E · Argon Gas · Stainless Steel Rollers · DP60/60',
+  'SGD5570': 'PGT Sliding Glass Door 5570 · Miami-Dade Certified · Aluminum Frame · Hurricane Laminated Insulating Glass · Clear · Energy Shield MAX Low-E · Argon Gas · DP60/60',
+  'COMBO_SH5500': 'PGT Multi-Unit Single Hung Combination · Miami-Dade Certified · Vinyl Frame · Hurricane Laminated Insulating Glass · Clear · Energy Shield MAX Low-E · Argon Gas · Mulled Units with Structural Mull Bar · DP50/50',
+  'MULLBAR': 'PGT Structural Mull Bar · Series 5500 · Miami-Dade Certified · Joins adjacent window units in a single opening',
+  'MISC': 'Custom / Specialty Unit · PGT Miami-Dade Certified Impact Product'
+};
+
+// ============================================================
+// REPORT GENERATOR
+// ============================================================
+function openReport(mode) {
+  const data = collectData();
+  const markup = parseFloat(data.markup)/100||0.3577;
+  const tax = parseFloat(data.taxRate)/100||0.07;
+  const permit = parseFloat(data.permitCost)||0;
+  const misc = parseFloat(data.miscCost)||0;
+  const screenCostSetting = parseFloat(data.screenCost)||350;
+
+  // Recalculate all line totals
+  let windowsSub=0, taxSub=0, laborSub=0;
+  const lineItems = [];
+
+  (data.windows||[]).forEach((w,i) => {
+    const width = parseFloat(w.width)||0;
+    const height = parseFloat(w.height)||0;
+    const qty = parseInt(w.qty)||1;
+    const cfg = w.config||'';
+    const type = w.type;
+    let pgtCost=0, lineMarkup=0, lineTax=0, lineLabor=0, lineScreen=0, lineAdder=parseFloat(w.adder)||0;
+    let matchNote='', matched=false;
+
+    function reportLineMath(unitCost, qty, type) {
+      const sp = calcWindowPrice(unitCost, type);
+      return {
+        pgtCost: unitCost * qty,
+        lineMarkup: (sp.withMarkup - unitCost) * qty,
+        lineTax: sp.tax * qty
+      };
+    }
+
+    if (type==='MISC') {
+      const miscUnit = parseFloat(w.misccost)||0;
+      const m = reportLineMath(miscUnit, qty, type);
+      pgtCost=m.pgtCost; lineMarkup=m.lineMarkup; lineTax=m.lineTax;
+      lineLabor = (parseFloat(w.misclabor)||0)*qty;
+      matched = pgtCost>0;
+    } else if (COMBO_TYPES.includes(type)) {
+      const baseType = type.replace('COMBO_','');
+      const units = parseInt(w.combounits)||2;
+      const unitWidth = width/units;
+      const unitMatch = findPrice(baseType,unitWidth,height,null);
+      const mullMatch = findPrice('MULL',0,height,null);
+      if (unitMatch) {
+        const mullCost = mullMatch?mullMatch.cost:91.30;
+        const totalPGT = (unitMatch.cost*units)+(mullCost*(units-1));
+        const m = reportLineMath(totalPGT, qty, type);
+        pgtCost=m.pgtCost; lineMarkup=m.lineMarkup; lineTax=m.lineTax;
+        lineLabor = (parseFloat(data.labor)||487)*units*qty;
+        matched=true; matchNote=`${units} units @ ${unitMatch.matchW}"×${unitMatch.matchH}"`;
+      }
+    } else if (MULL_TYPES.includes(type)) {
+      const mullMatch = findPrice('MULL',0,height,null);
+      if (mullMatch) {
+        const m = reportLineMath(mullMatch.cost, qty, type);
+        pgtCost=m.pgtCost; lineMarkup=m.lineMarkup; lineTax=m.lineTax;
+        matched=true;
+      }
+    } else if (AR_TYPES.includes(type)) {
+      const leg = parseFloat(w.leg)||0;
+      const arMatch = findARPrice(type,width,height,leg);
+      if (arMatch) {
+        const m = reportLineMath(arMatch.cost, qty, type);
+        pgtCost=m.pgtCost; lineMarkup=m.lineMarkup; lineTax=m.lineTax;
+        lineLabor = (parseFloat(data.labor)||497.77)*qty;
+        matched=true;
+      }
+    } else if (type === 'PW5520') {
+      const result = findPW5520Price(width, height);
+      if (result) {
+        const m = reportLineMath(result.cost, qty, type);
+        pgtCost=m.pgtCost; lineMarkup=m.lineMarkup; lineTax=m.lineTax;
+        lineLabor = getLaborCost(type, cfg, qty);
+        matched=true; matchNote=`W+H=${result.sum}"`;
+      }
+    } else {
+      const match = findPrice(type,width,height,cfg);
+      if (match) {
+        const m = reportLineMath(match.cost, qty, type);
+        pgtCost=m.pgtCost; lineMarkup=m.lineMarkup; lineTax=m.lineTax;
+        lineLabor = getLaborCost(type,cfg,qty);
+        matched=true; matchNote=`${match.matchW}"×${match.matchH}"`;
+        if (w.screen==='Box Screen') {
+          const scrQty=parseInt(w.screenqty)||1;
+          const scrSp = calcWindowPrice(screenCostSetting*scrQty);
+          lineScreen = scrSp.withMarkup + scrSp.tax;
+        }
+      }
+    }
+
+    const lineSell = pgtCost + lineMarkup;
+    const lineTotal = lineSell + lineTax + lineLabor + lineScreen + lineAdder;
+    windowsSub += lineSell;
+    taxSub += lineTax;
+    laborSub += lineLabor+lineScreen+lineAdder;
+
+    lineItems.push({...w, idx:i+1, pgtCost, lineMarkup, lineTax, lineLabor, lineScreen, lineAdder, lineTotal, matched, matchNote, qty});
+  });
+
+  // BHI Door line items
+  const doorItems = [];
+  (data.doors||[]).forEach((d, i) => {
+    const modelKey = d.model;
+    if (!modelKey) return;
+    const entry = BHI_DOORS[modelKey];
+    if (!entry) return;
+    const modelCost = modelKey === 'BHI_MANUAL' ? (parseFloat(d.manualcost)||0) : entry.modelCost;
+    if (!modelCost) return;
+    const prefinish = parseFloat(d.prefinish)||424.50;
+    const totalBHI = applyPGTAdjust(modelCost + BHI_FIXED_ADDONS + prefinish, modelKey);
+    const wm = totalBHI / (1 - markup);
+    const txAmt = wm * tax;
+    const labor = parseFloat(data.fdLabor)||1200;
+    const lineTotal = wm + txAmt + labor;
+    windowsSub += wm;
+    taxSub += txAmt;
+    laborSub += labor;
+    doorItems.push({ ...d, idx: lineItems.length + i + 1, modelCost, prefinish, totalBHI, wm, txAmt, labor, lineTotal, label: modelKey==='BHI_MANUAL' ? (d.manualdesc||'BHI Door') : entry.label });
+  });
+
+  const grandTotal = windowsSub+taxSub+laborSub+permit+misc;
+  const deposit = grandTotal*0.5;
+  const balance = grandTotal*0.5;
+  const ccFee = grandTotal*0.03;
+
+  // Build HTML
+  const isDealer = mode==='dealer';
+  const companyHTML = `
+    <div class="co-header">
+      <div class="co-name">Mullet's Aluminum</div>
+      <div class="co-contact">6345 McIntosh Road, Sarasota, FL 34238</div>
+      <div class="co-contact">941-371-3502 &nbsp;·&nbsp; Keith@mulletsaluminum.com</div>
+    </div>`;
+
+  const winRows = lineItems.map(w => {
+    if (!w.matched && w.type!=='MISC') return '';
+    const svg = getSVG(w.type, w.config);
+    const desc = typeDescriptions[w.type]||w.type;
+    const glassInfo = [w.glass||'Clear', w.framecolor||'White', w.screen&&w.screen!=='No Screen'?w.screen:''].filter(Boolean).join(' · ');
+
+    const customerCols = `<td class="price-cell line-price-cell">${fmt(w.lineTotal)}</td>`;
+    const dealerCols = `
+      <td class="price-cell">${fmt(w.pgtCost)}</td>
+      <td class="price-cell">${fmt(w.pgtCost+w.lineMarkup)}</td>
+      <td class="price-cell">${fmt(w.lineTax)}</td>
+      <td class="price-cell">${fmt(w.lineLabor)}</td>
+      ${w.lineScreen?`<td class="price-cell">${fmt(w.lineScreen)}</td>`:'<td></td>'}
+      ${w.lineAdder?`<td class="price-cell">${fmt(w.lineAdder)}<br><small>${w.adderdesc||''}</small></td>`:'<td></td>'}
+      <td class="price-cell total-cell">${fmt(w.lineTotal)}</td>`;
+
+    const sizeInfo = isDealer ? `<div class="win-size">${w.width}" W × ${w.height}" H${w.leg?' · Leg: '+w.leg+'"':''}</div>` : '';
+
+    const customerRow = `<tr>
+      <td class="win-num">${w.idx}</td>
+      <td class="win-svg">${svg}</td>
+      <td class="win-info">
+        <div style="font-size:0.78rem;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:3px">Qty: ${w.qty}</div>
+        <div class="win-type">${typeLabels[w.type]||w.type}${w.config?' — '+w.config:''}</div>
+        <div class="win-desc">${desc}</div>
+        <div class="win-meta">${w.room||''}${glassInfo?' · '+glassInfo:''}</div>
+        ${w.notes?`<div class="win-notes">Notes: ${w.notes}</div>`:''}
+        ${w.miscdesc&&w.type==='MISC'?`<div class="win-notes">${w.miscdesc}</div>`:''}
+        ${w.adderdesc&&w.lineAdder?`<div class="win-notes">+ ${w.adderdesc}</div>`:''}
+      </td>
+      ${customerCols}
+    </tr>`;
+
+    const dealerRow = `<tr>
+      <td class="win-num">${w.idx}</td>
+      <td class="win-info" colspan="2">
+        <div class="win-type">${typeLabels[w.type]||w.type}${w.config?' — '+w.config:''}</div>
+        <div class="win-size">${w.width}" W × ${w.height}"H${w.leg?' · Leg: '+w.leg+'"':''} · Qty: ${w.qty}</div>
+        <div class="win-meta">${w.room||''}${glassInfo?' · '+glassInfo:''}</div>
+        ${w.notes?`<div class="win-notes">${w.notes}</div>`:''}
+        ${w.miscdesc&&w.type==='MISC'?`<div class="win-notes">${w.miscdesc}</div>`:''}
+        ${w.adderdesc&&w.lineAdder?`<div class="win-notes">+ ${w.adderdesc}: ${fmt(w.lineAdder)}</div>`:''}
+      </td>
+      ${dealerCols}
+    </tr>`;
+
+    return isDealer ? dealerRow : customerRow;
+  }).join('');
+
+  const doorRows = doorItems.map(d => {
+    const doorSVG = `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="100" viewBox="0 0 120 100"><rect x="20" y="5" width="80" height="90" fill="none" stroke="#8a3a00" stroke-width="3" rx="2"/><circle cx="75" cy="52" r="4" fill="#8a3a00"/><path d="M79,52 Q95,35 95,52" fill="none" stroke="#8a3a00" stroke-width="1.5" stroke-dasharray="4,2"/><text x="60" y="96" font-size="8" fill="#8a3a00" text-anchor="middle">SWING DOOR</text></svg>`;
+    const customerCols = `<td class="price-cell line-price-cell">${fmt(d.lineTotal)}</td>`;
+    const dealerCols = `
+      <td class="price-cell">${fmt(d.totalBHI)}</td>
+      <td class="price-cell">${fmt(d.wm)}</td>
+      <td class="price-cell">${fmt(d.txAmt)}</td>
+      <td class="price-cell">${fmt(d.labor)}</td>
+      <td></td><td></td>
+      <td class="price-cell total-cell">${fmt(d.lineTotal)}</td>`;
+    const customerRow = `<tr>
+      <td class="win-num">${d.idx}</td>
+      <td class="win-svg">${doorSVG}</td>
+      <td class="win-info">
+        <div style="font-size:0.78rem;font-weight:700;color:#8a3a00;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:3px">BHI DOOR</div>
+        <div class="win-type">${d.label}</div>
+        <div class="win-meta">${d.handing||''}${d.room?' · '+d.room:''}</div>
+        ${d.notes?`<div class="win-notes">Notes: ${d.notes}</div>`:''}
+      </td>
+      ${customerCols}
+    </tr>`;
+    const dealerRow = `<tr>
+      <td class="win-num">${d.idx}</td>
+      <td class="win-info" colspan="2">
+        <div style="font-weight:700;color:#8a3a00">BHI DOOR — ${d.label}</div>
+        <div class="win-size">Model: ${fmt(d.modelCost)} · Add-ons: ${fmt(BHI_FIXED_ADDONS)} · Prefinish: ${fmt(d.prefinish)} · Total BHI: ${fmt(d.totalBHI)}</div>
+        <div class="win-meta">${d.handing||''}${d.room?' · '+d.room:''}</div>
+        ${d.notes?`<div class="win-notes">${d.notes}</div>`:''}
+      </td>
+      ${dealerCols}
+    </tr>`;
+    return isDealer ? dealerRow : customerRow;
+  }).join('');
+
+  const dealerHeader = isDealer ? `<th colspan="2">Window / Size</th><th>PGT Cost</th><th>w/ Markup</th><th>Tax</th><th>Labor</th><th>Screen</th><th>Add-on</th><th>Total</th>` : `<th class="line-price-header">Price</th>`;
+
+  const totalsHTML = `
+    <div class="totals-section">
+      <table class="totals-table">
+        ${isDealer?`
+          <tr><td>Windows Subtotal</td><td>${fmt(windowsSub)}</td></tr>
+          <tr><td>Tax</td><td>${fmt(taxSub)}</td></tr>
+          <tr><td>Labor & Installation</td><td>${fmt(laborSub)}</td></tr>
+          ${permit?`<tr><td>Permit</td><td>${fmt(permit)}</td></tr>`:''}
+          ${misc?`<tr><td>Miscellaneous</td><td>${fmt(misc)}</td></tr>`:''}
+        `:''}
+        <tr class="grand-total"><td>TOTAL</td><td>${fmt(grandTotal)}</td></tr>
+        <tr><td>50% Deposit Due</td><td>${fmt(deposit)}</td></tr>
+        <tr><td>Balance Due Upon Completion</td><td>${fmt(balance)}</td></tr>
+        <tr class="cc-row"><td>3% Credit Card Fee</td><td>${fmt(ccFee)}</td></tr>
+      </table>
+    </div>`;
+
+  const installDateFmt = data.installDate || '_______________';
+  const installDaysVal = data.installDays || '___';
+
+  const boilerplateHTML = !isDealer ? `
+    <div class="boilerplate">
+      <h3>Installation Includes:</h3>
+      <ul>
+        <li>Supply and installation of all hurricane impact windows and doors listed above — PGT 150MPH rated, Miami-Dade certified</li>
+        <li>All work performed by full-time, trained, and insured Mullet's Aluminum craftsmen — <strong>we never use subcontractors</strong></li>
+        <li>Mullet's Aluminum is a fully licensed Commercial/Residential General Contractor <strong>(#CGC1507267)</strong></li>
+        <li>Includes all shop drawings, engineering, permits, insurance, and workers' compensation</li>
+        <li>Removal and complete disposal of all old units and related materials</li>
+        <li>All products are custom-engineered and designed specifically for each opening</li>
+        <li>Replace existing wood bucks at openings with pressure-treated wood reinforcement as necessary</li>
+      </ul>
+      <div class="install-info">
+        <span><strong>Tentative Install Date:</strong> ${installDateFmt}</span>
+        <span><strong>Estimated Install Time:</strong> ${installDaysVal} day(s)</span>
+        <span><strong>Quote Valid For:</strong> 15 days from date above</span>
+      </div>
+      <p class="confidential">&#128274; <strong>Confidentiality Notice:</strong> This proposal is prepared exclusively for your benefit. In good faith, please do not share this proposal or any parts of it with any other party. Thank you.</p>
+      <p class="rendering-note">*Renderings shown on this proposal are for the purposes of referencing operation and style only.</p>
+    </div>` : '';
+
+  const sigHTML = `
+    <div class="sig-section">
+      ${boilerplateHTML}
+
+      <div class="legal-block">
+        <h3>ACCEPTANCE OF SALES AGREEMENT</h3>
+        <p>Please examine this Sales Agreement closely. Mullet's Aluminum Products, Inc. agrees to furnish and install the materials itemized herein at the prices, terms, quantities, and locations specified in this agreement. The above products are not sized for installation. Dimensions will change. Drawings above are not to scale. Your signature below confirms that you have verified all quantities, specifications and further confirms your understanding that all products in this agreement are special order and are not changeable, cancelable, or returnable upon release of this order to the manufacturer. Any deviation from this agreement must be covered by a subsequent written proposal and acceptance; verbal quotations to the contrary are not binding. A monthly service charge of 1.5% will be added to all Past Due Accounts. All warranties will be those of the manufacturer's printed warranties. Quote expires in 15 days (please call for update). 50% Deposit, Balance upon completion (after county inspection).</p>
+
+        <h4>PLEASE READ:</h4>
+        <ul>
+          <li>WHEN GLASS IS INSULATED WITH CLEAR GLASS AND 70 LOWE, GLASS WILL HAVE A GREEN HUE ONLY VISIBLE FROM EXTERIOR. INTERIOR APPEARS LESS GREEN. GLASS AND LAMINATED GLASS HAVE INHERENT FLAWS THAT MAY CAUSE DISTORTION WHICH IS ALLOWABLE BY AAMA AND MANUFACTURER GUIDELINES. REPLACEMENT IS AT MANUFACTURER'S DISCRETION.</li>
+          <li>If windows show condensation: pgtwindows.com/condensation-guide</li>
+          <li>Turtle tint glass will be used on property facing the beach.</li>
+          <li>Mullet's and I will visit to make precise measurements and confirm all openings for a custom installation.</li>
+          <li>Mullet's installers place protection and drop cloths at the working area to protect your home.</li>
+          <li>Includes removal and disposal of old material.</li>
+          <li>New windows are installed using tap-cons through newly installed pressure treated wood buck strips penetrating 1¼" into concrete/wood. 3-point caulk system: windows sealed with latex sealant; exterior caulked with polyurethane commercial grade caulk.</li>
+          <li>With installation complete, installers will vacuum as necessary and clean windows and sills, removing all debris.</li>
+          <li>Additional trim may need to be added around sliding glass doors based on depth of new track and frame.</li>
+          <li>Includes screens with all windows.</li>
+          <li>Includes replacement of marble sill should we crack an un-cracked sill at time of installation.</li>
+          <li>If necessary, minor stucco damage to be addressed by Mullet's.</li>
+          <li>Temporary condensation may form on glass surfaces when there is a significant temperature differential between interior and exterior environments.</li>
+          <li>If any paint work is necessary it will need to be done by you or others.</li>
+          <li>Wood repair discovered at time of removal will be shown and discussed with you and billed additionally as follows: Labor $65.00/hour, Material cost plus 20%.</li>
+          <li>Structures built prior to 1978 are subject to lead paint test. If lead is discovered, an additional $100.00 per room for isolating possible contamination.</li>
+          <li>Mullet's cannot be responsible for window treatments. As a courtesy we will remove and replace window treatments, but we cannot be held responsible for them. We are not a window treatment company.</li>
+          <li>Alarms: Mullet's will do its best to reattach the alarm system; however, Mullet's is not an alarm company. Old alarm systems don't always align with new windows. Your alarm company should check your system. Mullet's is not responsible for the operation of your alarm system.</li>
+          <li>All windows will be installed by Mullet's own employees with a minimum one-year warranty.</li>
+          <li>In the case there are "add-on" products listed on this quote, the cost is only applicable to this quote. Those add-ons done at a later time will incur additional permit and mobilization cost.</li>
+        </ul>
+
+        <div class="company-footer">
+          <p><strong>Specializing in Quality Workmanship since 1978</strong><br>
+          Aluminum Association of Florida's Award of Excellence Winner</p>
+          <p>MULLET'S Aluminum Products, Inc. · 6345 McIntosh Road · Sarasota, FL 34238<br>
+          Toll Free: 1-877-685-5387 · Tel: (941) 371-3502 · Fax: (941) 378-5676 · Keith@mulletsaluminum.com</p>
+        </div>
+
+        <div class="recovery-fund">
+          <p><strong>FLORIDA HOMEOWNERS CONSTRUCTION RECOVERY FUND</strong></p>
+          <p>Payment, up to a limited amount, may be available from the Florida Homeowners' Construction Recovery Fund if you lose money on a project performed under contract, where the loss results from specific violations of Florida law by a licensed contractor. For information about the Recovery Fund and filing a claim, contact the Florida Construction Industry Licensing Board at: 2601 Blairstone Road, Tallahassee, FL.</p>
+        </div>
+      </div>
+
+      <div class="sig-row" style="margin-top:2rem">
+        <div class="sig-line"><div class="sig-label">Authorized Signature</div></div>
+        <div class="sig-line"><div class="sig-label">Date</div></div>
+      </div>
+      <div class="sig-row" style="margin-top:2rem">
+        <div class="sig-line"><div class="sig-label">Deposit Amount</div></div>
+        <div class="sig-line"><div class="sig-label">Balance Due</div></div>
+      </div>
+    </div>`;
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${isDealer?'Dealer Report':'Customer Proposal'} — ${data.custName||'Estimate'}</title>
+<style>
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size:13px; color:#1a1a1a; background:#fff; }
+  .page { max-width:900px; margin:0 auto; padding:2rem; }
+  .co-header { text-align:center; border-bottom:3px solid #1a3a6c; padding-bottom:1rem; margin-bottom:1.5rem; }
+  .co-name { font-size:1.8rem; font-weight:700; color:#1a3a6c; }
+  .co-contact { font-size:0.85rem; color:#555; margin-top:3px; }
+  .report-title { font-size:1rem; font-weight:600; color:${isDealer?'#8a3a00':'#1a3a6c'}; text-align:center; margin-bottom:1.5rem; text-transform:uppercase; letter-spacing:0.1em; }
+  .job-info { display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1.5rem; padding:1rem; background:#f5f7fa; border-radius:8px; }
+  .job-field label { font-size:0.72rem; font-weight:700; text-transform:uppercase; color:#888; display:block; margin-bottom:2px; }
+  .job-field span { font-size:0.95rem; font-weight:500; }
+  .job-notes { grid-column:span 2; }
+  table.win-table { width:100%; border-collapse:collapse; margin-bottom:1.5rem; }
+  table.win-table th { background:#1a3a6c; color:#fff; padding:8px 6px; font-size:0.75rem; text-align:left; }
+  table.win-table td { padding:10px 6px; border-bottom:1px solid #e0e0e0; vertical-align:top; }
+  table.win-table tr:last-child td { border-bottom:none; }
+  .win-num { font-weight:700; color:#1a3a6c; font-size:1rem; width:28px; }
+  .win-svg { width:90px; padding:4px; }
+  .win-svg svg { display:block; }
+  .win-type { font-weight:700; font-size:0.9rem; color:#1a3a6c; }
+  .win-desc { font-size:0.75rem; color:#555; margin:3px 0; line-height:1.4; }
+  .win-size { font-size:0.8rem; font-weight:600; margin:2px 0; }
+  .win-meta { font-size:0.78rem; color:#777; }
+  .win-notes { font-size:0.75rem; color:#888; font-style:italic; margin-top:2px; }
+  .price-cell { text-align:right; font-size:0.85rem; white-space:nowrap; }
+  .total-cell { font-weight:700; color:#1a6fc4; }
+  .totals-section { display:flex; justify-content:flex-end; margin-bottom:2rem; }
+  table.totals-table { min-width:280px; border-collapse:collapse; }
+  table.totals-table td { padding:5px 10px; font-size:0.9rem; border-bottom:1px solid #e0e0e0; }
+  table.totals-table td:last-child { text-align:right; font-weight:600; }
+  .grand-total td { font-size:1.1rem; font-weight:700; color:#1a6fc4; border-top:2px solid #1a3a6c; border-bottom:2px solid #1a3a6c; }
+  .cc-row td { font-size:0.8rem; color:#888; border-bottom:none; }
+  .sig-section { margin-top:2rem; border-top:1px solid #ccc; padding-top:1.5rem; }
+  .terms { font-size:0.75rem; color:#666; line-height:1.5; margin-bottom:1.5rem; }
+  .sig-row { display:grid; grid-template-columns:1fr 1fr; gap:2rem; }
+  .sig-line { border-bottom:1.5px solid #333; padding-bottom:2px; margin-top:2rem; }
+  .sig-label { font-size:0.72rem; color:#888; margin-top:4px; }
+  .print-btn { position:fixed; bottom:1.5rem; right:1.5rem; background:#1a3a6c; color:#fff; border:none; padding:14px 24px; border-radius:999px; font-size:1rem; font-weight:700; cursor:pointer; box-shadow:0 4px 12px rgba(0,0,0,0.3); }
+  .back-btn { position:fixed; bottom:1.5rem; left:1.5rem; background:#fff; color:#1a3a6c; border:2px solid #1a3a6c; padding:14px 24px; border-radius:999px; font-size:1rem; font-weight:700; cursor:pointer; box-shadow:0 4px 12px rgba(0,0,0,0.15); }
+  @media print { .print-btn, .back-btn { display:none; } }
+  .boilerplate { background:#f5f7fa; border-radius:8px; padding:1.25rem; margin-bottom:1.5rem; border-left:4px solid #1a3a6c; }
+  .boilerplate h3 { font-size:0.85rem; font-weight:700; color:#1a3a6c; margin-bottom:0.75rem; text-transform:uppercase; letter-spacing:0.05em; }
+  .boilerplate ul { padding-left:1.25rem; margin-bottom:1rem; }
+  .boilerplate li { font-size:0.8rem; color:#333; margin-bottom:5px; line-height:1.4; }
+  .install-info { display:flex; gap:2rem; flex-wrap:wrap; font-size:0.82rem; margin:0.75rem 0; padding:0.75rem; background:#fff; border-radius:6px; border:1px solid #ddd; }
+  .confidential { font-size:0.78rem; color:#555; margin-top:0.75rem; padding:0.5rem; background:#fffde8; border-radius:4px; }
+  .rendering-note { font-size:0.72rem; color:#999; margin-top:0.5rem; font-style:italic; }
+  .legal-block { margin-top:1.5rem; border-top:2px solid #1a3a6c; padding-top:1.25rem; }
+  .legal-block h3 { font-size:0.85rem; font-weight:700; color:#1a3a6c; margin-bottom:0.75rem; text-transform:uppercase; letter-spacing:0.05em; }
+  .legal-block h4 { font-size:0.8rem; font-weight:700; color:#333; margin:1rem 0 0.5rem; }
+  .legal-block p { font-size:0.75rem; color:#333; line-height:1.5; margin-bottom:0.5rem; }
+  .legal-block ul { padding-left:1.25rem; margin-bottom:1rem; }
+  .legal-block li { font-size:0.72rem; color:#444; margin-bottom:4px; line-height:1.4; }
+  .company-footer { margin:1.25rem 0; padding:1rem; background:#f5f7fa; border-radius:6px; text-align:center; }
+  .company-footer p { font-size:0.78rem; color:#333; margin-bottom:4px; }
+  .recovery-fund { margin-top:1rem; padding:0.75rem; border:1px solid #ccc; border-radius:6px; }
+  .recovery-fund p { font-size:0.7rem; color:#555; margin-bottom:4px; line-height:1.4; }
+  @media print { body { font-size:11px; } .page { padding:1rem; } }
+</style>
+</head>
+<body>
+<div class="page">
+  ${companyHTML}
+  <div class="report-title">${isDealer?'Dealer Cost Report':'Installation Proposal'}</div>
+
+  <div class="job-info">
+    <div class="job-field"><label>Customer</label><span>${data.custName||'—'}</span></div>
+    <div class="job-field"><label>Date</label><span>${data.jobDate||new Date().toLocaleDateString()}</span></div>
+    <div class="job-field"><label>Phone</label><span>${data.custPhone||'—'}</span></div>
+    <div class="job-field"><label>Job #</label><span>${data.jobNum||'—'}</span></div>
+    <div class="job-field job-notes"><label>Address</label><span>${data.custAddr||'—'}</span></div>
+    ${data.jobNotes?('<div class="job-field job-notes"><label>Scope of Work</label><span>'+data.jobNotes+'</span></div>'):''}
+  </div>
+  <table class="win-table">
+    <thead><tr><th>#</th>${isDealer ? dealerHeader : '<th>Window</th><th>Description</th><th class="line-price-header">Price</th>'}</tr></thead>
+    <tbody>${winRows}${doorRows}</tbody>
+  </table>
+  ${totalsHTML}
+  ${sigHTML}
+</div>
+<button class="back-btn" onclick="var tried=false;try{window.close();tried=true;}catch(e){}setTimeout(function(){if(!tried||!window.closed){document.getElementById('close-overlay').style.display='flex';}},200);">✕ Close</button>
+<button class="print-btn" onclick="window.print()">🖨 Print / Save PDF</button>
+<button id="toggleBtn" data-hidden="0" onclick="var h=this.dataset.hidden==='1';var cells=document.getElementsByClassName('line-price-cell');var hdr=document.getElementsByClassName('line-price-header');for(var i=0;i<cells.length;i++){cells[i].style.visibility=h?'':'hidden';}for(var j=0;j<hdr.length;j++){hdr[j].style.visibility=h?'':'hidden';}this.dataset.hidden=h?'0':'1';this.textContent=h?'Hide Line Prices':'Show Line Prices';" style="position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);background:#fff;color:#1a3a6c;border:2px solid #1a3a6c;padding:14px 24px;border-radius:999px;font-size:1rem;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.15);display:${isDealer?'none':'block'}">Hide Line Prices</button>
+<div id="close-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:16px;padding:2rem;text-align:center;max-width:320px;box-shadow:0 8px 32px rgba(0,0,0,0.3);">
+    <div style="font-size:1.1rem;font-weight:700;color:#1a3a6c;margin-bottom:0.75rem;">Done reviewing?</div>
+    <div style="font-size:0.9rem;color:#555;margin-bottom:1.5rem;">Safari didn't allow auto-close. Please close this tab manually.</div>
+    <button onclick="document.getElementById('close-overlay').style.display='none'" style="padding:10px 24px;background:#1a3a6c;color:#fff;border:none;border-radius:999px;font-size:0.95rem;font-weight:700;cursor:pointer;">OK</button>
+  </div>
+</div>
+</body>
+</html>`;
+
+  const blob = new Blob([html], {type:'text/html'});
+  const url = URL.createObjectURL(blob);
+  window.open(url, '_blank');
+}
+
+// VOICE MEASUREMENT
+let activeRecognition = null;
+let activeMicBtn = null;
+
+function parseMeasurement(transcript) {
+  transcript = transcript.toLowerCase().trim();
+  const fractions = {
+    'one eighth':0.125,'one-eighth':0.125,'1/8':0.125,
+    'one quarter':0.25,'one-quarter':0.25,'1/4':0.25,'a quarter':0.25,
+    '3/8':0.375,'three eighths':0.375,'three-eighths':0.375,
+    'a half':0.5,'one half':0.5,'half':0.5,'1/2':0.5,
+    '5/8':0.625,'five eighths':0.625,
+    '3/4':0.75,'three quarters':0.75,'three-quarters':0.75,
+    '7/8':0.875,'seven eighths':0.875
+  };
+  let result = transcript;
+  for (const [word, val] of Object.entries(fractions)) {
+    result = result.replace(new RegExp(word,'g'), ' '+val+' ');
+  }
+  const nums = result.match(/\d+(\.\d+)?/g);
+  if (!nums) return null;
+  if (nums.length === 1) return parseFloat(nums[0]);
+  return parseFloat(nums[0]) + parseFloat(nums[1]);
+}
+
+function startMic(fieldId, winId) {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) { showToast('Microphone not supported on this browser'); return; }
+
+  const btn = document.getElementById(fieldId.replace(/-/g,'').replace('width','micW').replace('height','micH'));
+  // Find btn by searching
+  const allBtns = document.querySelectorAll('.mic-btn');
+  let micBtn = null;
+  allBtns.forEach(b => { if (b.getAttribute('onclick') && b.getAttribute('onclick').includes(fieldId)) micBtn = b; });
+
+  if (activeRecognition) {
+    activeRecognition.stop();
+    activeRecognition = null;
+    if (activeMicBtn) { activeMicBtn.classList.remove('listening'); activeMicBtn.textContent = '🎤'; }
+    activeMicBtn = null;
+    return;
+  }
+
+  const recognition = new SpeechRecognition();
+  recognition.continuous = false;
+  recognition.interimResults = false;
+  recognition.lang = 'en-US';
+
+  activeRecognition = recognition;
+  activeMicBtn = micBtn;
+  if (micBtn) { micBtn.classList.add('listening'); micBtn.textContent = '🔴'; }
+
+  recognition.onresult = (e) => {
+    const transcript = e.results[0][0].transcript;
+    const val = parseMeasurement(transcript);
+    if (val !== null) {
+      const field = document.getElementById(fieldId);
+      if (field) {
+        field.style.display = 'block';
+        field.value = val;
+        // Set the select to custom
+
+        updatePrice(winId);
+      }
+      showToast('Got: ' + val + '"');
+    } else {
+      showToast('Could not parse: "' + transcript + '"');
+    }
+  };
+  recognition.onerror = () => { showToast('Mic error — try again'); };
+  recognition.onend = () => {
+    activeRecognition = null;
+    if (activeMicBtn) { activeMicBtn.classList.remove('listening'); activeMicBtn.textContent = '🎤'; }
+    activeMicBtn = null;
+  };
+  recognition.start();
+}
+
+</script>
+</div>
+</body>
+</html>
